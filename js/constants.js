@@ -18,7 +18,7 @@ export const TYPES = ["Pokémon","Objeto","Herramienta","Estadio","Partidario","
 
 export const VARIANTS = [
   {key:"normal", label:"N", name:"Normal", color:"var(--v-normal)"},
-  {key:"reverse", label:"R", name:"Reverse", color:"var(--v-normal)"},
-  {key:"holo", label:"H", name:"Holográfica", color:"var(--v-normal)"},
-  {key:"fullart", label:"FA", name:"FullArt", color:"var(--v-normal)"}
+  {key:"reverse", label:"R", name:"Reverse", color:"var(--v-reverse)"},
+  {key:"holo", label:"H", name:"Holográfica", color:"var(--v-holo)"},
+  {key:"fullart", label:"FA", name:"FullArt", color:"var(--v-fullart)"}
 ];

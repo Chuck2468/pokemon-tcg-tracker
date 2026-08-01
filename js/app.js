@@ -1,6 +1,10 @@
+import { auth } from "./auth.js";
 import { storage } from "./cardRepository.js";
 import { TYPE_COLORS,TYPE_SOFT,TYPES,VARIANTS } from "./constants.js";
 import { COLLECTIONS } from "./data/collections.js";
+import { userRepository } from "./userRepository.js";
+
+const INVENTORY_ID = "inventory";
 
 let state = {
   activeId: COLLECTIONS[0].id,
@@ -8,8 +12,71 @@ let state = {
   search: "",
   activeType: "ALL",
   activeStatus: "ALL",
-  saveError: false
+  saveError: false,
+
+  user: null
 };
+
+// Guards against handling the same session twice (e.g. an explicit getSession()
+// check racing with the SIGNED_IN/INITIAL_SESSION event for the same session).
+let handledSessionId = null;
+
+async function handleSession(session) {
+  if (!session) {
+    handledSessionId = null;
+    state.user = null;
+    renderLogin();
+    return;
+  }
+  // Limpiar los parámetros OAuth de la URL
+  if (window.location.search || window.location.hash) {
+    history.replaceState(
+      {},
+      document.title,
+      window.location.pathname
+    );
+  }
+  // Evitar procesar dos veces la misma sesión
+  if (session.access_token === handledSessionId) return;
+  handledSessionId = session.access_token;
+  const user = await auth.getUser();
+  const role = await userRepository.getRole(user.id);
+  if (!role) {
+    state.user = null;
+    renderUnauthorized();
+    return;
+  }
+  state.user = {
+    id: user.id,
+    role,
+    name:
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.email,
+    email: user.email
+  };
+  // Los viewers no tienen acceso al listado de colecciones, así que
+  // siempre aterrizan en el Inventario en vez de en la primera colección.
+  if (role !== "admin") {
+    state.activeId = INVENTORY_ID;
+  }
+  await startApp();
+}
+
+// Drives the app off Supabase's own auth events instead of a one-shot
+// getSession() check on script load. onAuthStateChange only fires SIGNED_IN
+// once the client has fully finished processing the OAuth redirect (parsing
+// the URL, exchanging the code, and persisting the session) - checking
+// getSession() synchronously on load can race with that and briefly return
+// null right after a valid login, bouncing the user back to the login screen.
+auth.onAuthChange((_event, session) => {
+  handleSession(session);
+});
+
+// Fallback for a normal page load where a session is already persisted
+// (no OAuth redirect just happened). handleSession() is safe to call twice
+// thanks to the handledSessionId guard above.
+auth.getSession().then(handleSession);
 
 const root = document.getElementById("root");
 
@@ -47,7 +114,7 @@ function cardTotal(card){
   return VARIANTS.reduce((s,v) => s + (card.variantes[v.key] || 0), 0);
 }
 
-async function loadCollection(id) {
+async function loadCollectionData(id) {
   const meta = getMeta(id);
   // Cartas base de la colección (nombre, tipo, número, etc.)
   const seedCards = meta.seed.map(toVariantCard);
@@ -78,15 +145,43 @@ async function loadCollection(id) {
     // Si falla Supabase, cargar al menos la colección vacía
     state.cache[id] = seedCards;
   }
-    render();
+}
+
+async function loadCollection(id) {
+  await loadCollectionData(id);
+  render();
+}
+
+function allCollectionsLoaded(){
+  return COLLECTIONS.every(c => state.cache[c.id] !== undefined);
+}
+
+async function loadAllCollections(){
+  const missing = COLLECTIONS.filter(c => state.cache[c.id] === undefined);
+  await Promise.all(missing.map(c => loadCollectionData(c.id)));
+  render();
 }
 
 function selectCollection(id){
   if(id === state.activeId) return;
+  // Los viewers no pueden navegar a colecciones individuales, solo al Inventario.
+  if(id !== INVENTORY_ID && state.user?.role !== "admin") return;
+
   state.activeId = id;
   state.search = "";
   state.activeType = "ALL";
   state.activeStatus = "ALL";
+
+  if(id === INVENTORY_ID){
+    if(!allCollectionsLoaded()){
+      render();
+      loadAllCollections();
+    } else {
+      render();
+    }
+    return;
+  }
+
   if(state.cache[id] === undefined){
     render();
     loadCollection(id);
@@ -145,6 +240,24 @@ function splitCollectionName(name){
 }
 
 function buildSidebarHtml(){
+  const isAdmin = state.user?.role === "admin";
+
+  const inventoryItem = `
+    <div class="sidebar-item sidebar-item-inventory ${state.activeId === INVENTORY_ID ? "active" : ""}" data-collection="${INVENTORY_ID}">
+      <span class="sidebar-dot" style="--item-color:var(--electric-blue)"></span>
+      <span class="sidebar-name">
+        <span class="sidebar-name-title">Inventario</span>
+      </span>
+    </div>`;
+
+  // Los viewers solo ven el Inventario: sin listado de colecciones ni botones de edición.
+  if(!isAdmin){
+    return `
+    <div class="sidebar">
+      ${inventoryItem}
+    </div>`;
+  }
+
   const items = COLLECTIONS.map(c => {
     const {title, abbr} = splitCollectionName(c.name);
     return `
@@ -158,15 +271,75 @@ function buildSidebarHtml(){
   }).join("");
   return `
     <div class="sidebar">
+      ${inventoryItem}
       <div class="sidebar-title">Colecciones</div>
       ${items}
       <div class="sidebar-hint">Cuando tengas la lista de otra colección, pásamela y la añado aquí.</div>
     </div>`;
 }
 
+function renderLogin() {
+  root.innerHTML = `
+    <div class="shell">
+      <div class="main">
+        <div class="wrap" style="text-align:center; padding-top:100px;">
+          <h1>Pokémon TCG Tracker</h1>
+          <p>Inicia sesión para acceder a tu colección.</p>
+          <button id="loginBtn">Iniciar sesión con Google</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document
+    .getElementById("loginBtn")
+    .addEventListener("click", () => auth.login());
+}
+
+function renderUnauthorized() {
+  root.innerHTML = `
+    <div class="shell">
+      <div class="main">
+        <div class="wrap" style="text-align:center; padding-top:100px;">
+          <h1>Acceso no autorizado</h1>
+          <p>
+            Tu cuenta de Google ha iniciado sesión correctamente,
+            pero no tiene permisos para utilizar esta aplicación.
+          </p>
+          <button id="logoutBtn">Cerrar sesión</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document
+    .getElementById("logoutBtn")
+    .addEventListener("click", async () => {
+      await auth.logout();
+      location.reload();
+    });
+}
+
+function buildUserPanelHtml(){
+  if(!state.user) return "";
+  const roleName = state.user.role === "admin" ? "Administrador" : "Consulta";
+  return `
+   <div class="user-panel">
+     <div class="user-name">👤 ${escapeHtml(state.user.name)}</div>
+     <div class="user-role">${roleName}</div>
+     <button id="logoutBtn" class="logout-btn">Cerrar sesión</button>
+   </div>
+  `;
+}
+
 function render(){
-  const meta = getMeta(state.activeId);
   const sidebarHtml = buildSidebarHtml();
+
+  if(state.activeId === INVENTORY_ID){
+    renderInventory(sidebarHtml);
+    return;
+  }
+
+  const meta = getMeta(state.activeId);
 
   if(state.cache[state.activeId] === undefined){
     root.innerHTML = `
@@ -181,9 +354,11 @@ function render(){
   const juego = computeStats(meta.gameSetMax);
   const maestro = computeStats();
   const list = filteredCards();
-
+  const editable = state.user?.role === "admin";
   const progressJuegoHtml = buildProgressHtml(juego.pct);
   const progressMaestroHtml = buildProgressHtml(maestro.pct);
+
+  const userInfoHtml = buildUserPanelHtml();
 
   const statusChipsHtml = ["ALL", "PENDING"].map(s => {
     const label = s === "ALL" ? "Todas" : "Pendientes";
@@ -207,9 +382,9 @@ function render(){
     const variantsHtml = VARIANTS.map(v => `
       <div class="variant-badge" style="--variant-color:${v.color}">
         <div class="vrow">
-          <button class="vbtn" data-action="dec" data-id="${c.id}" data-variant="${v.key}">−</button>
+          <button class="vbtn" data-action="dec" data-id="${c.id}" data-variant="${v.key}"  ${editable ? "" : "disabled"}>−</button>
           <span class="vcount">${c.variantes[v.key] || 0}</span>
-          <button class="vbtn" data-action="inc" data-id="${c.id}" data-variant="${v.key}">+</button>
+          <button class="vbtn" data-action="inc" data-id="${c.id}" data-variant="${v.key}"  ${editable ? "" : "disabled"}>+</button>
         </div>
         <span class="lbl">${v.name}</span>
       </div>`).join("");
@@ -235,25 +410,27 @@ function render(){
     <div class="main">
     <div class="wrap">
 
+      ${userInfoHtml}
+
       <div class="header">
         <div class="title-block">
           <div class="eyebrow">${escapeHtml(meta.eyebrow)}</div>
-          <h1>Colección <span style="color:${meta.accent}">${escapeHtml(meta.name)}</span></h1>
+          <h1><span style="color:${meta.accent}">${escapeHtml(meta.name)}</span></h1>
         </div>
         <div class="stats">
           <div class="stat-pill"><span class="num">${maestro.copies}</span><span class="lbl">Copias</span></div>
-          <div class="stat-pill"><span class="num">${juego.pct}%</span><span class="lbl">Set Juego</span></div>
-          <div class="stat-pill"><span class="num">${maestro.pct}%</span><span class="lbl">Set Maestro</span></div>
+          <div class="stat-pill"><span class="num">${juego.pct}%</span><span class="lbl">Play Set</span></div>
+          <div class="stat-pill"><span class="num">${maestro.pct}%</span><span class="lbl">Master Set</span></div>
         </div>
       </div>
 
       <div class="progress-strip">
-        <div class="row"><span>Set de Juego (001–${String(meta.gameSetMax).padStart(3,"0")})</span><span>${juego.owned} de ${juego.total} obtenidas · ${juego.pct}%</span></div>
+        <div class="row"><span>Play Set (001–${String(meta.gameSetMax).padStart(3,"0")})</span><span>${juego.owned} de ${juego.total} obtenidas · ${juego.pct}%</span></div>
         <div class="progress-track">${progressJuegoHtml}</div>
       </div>
 
       <div class="progress-strip">
-        <div class="row"><span>Set Maestro (001–${String(maestro.total).padStart(3,"0")})</span><span>${maestro.owned} de ${maestro.total} obtenidas · ${maestro.pct}%</span></div>
+        <div class="row"><span>Master Set (001–${String(maestro.total).padStart(3,"0")})</span><span>${maestro.owned} de ${maestro.total} obtenidas · ${maestro.pct}%</span></div>
         <div class="progress-track">${progressMaestroHtml}</div>
       </div>
 
@@ -275,12 +452,134 @@ function render(){
   attachEvents();
 }
 
+function renderInventory(sidebarHtml){
+  if(!allCollectionsLoaded()){
+    root.innerHTML = `
+    <div class="shell">
+      ${sidebarHtml}
+      <div class="main"><div class="loading">Cargando inventario…</div></div>
+    </div>`;
+    attachEvents();
+    return;
+  }
+
+  const userInfoHtml = buildUserPanelHtml();
+
+  const typeChipsHtml = ["ALL", ...TYPES].map(t => {
+    const label = t === "ALL" ? "Todos los tipos" : t;
+    const active = state.activeType === t;
+    const color = t === "ALL" ? "var(--ink)" : TYPE_COLORS[t];
+    return `<div class="chip ${active ? "active" : ""}" data-type="${t}"
+      style="${active ? `background:${color};` : ""}">${escapeHtml(label)}</div>`;
+  }).join("");
+
+  const q = state.search.trim().toLowerCase();
+
+  const groups = COLLECTIONS.map(meta => {
+    let cards = (state.cache[meta.id] || []).filter(card => cardTotal(card) > 0);
+    if(state.activeType !== "ALL"){
+      cards = cards.filter(card => card.tipo === state.activeType);
+    }
+    if(q){
+      cards = cards.filter(card =>
+        card.nombre.toLowerCase().includes(q) ||
+        card.numero.toLowerCase().includes(q)
+      );
+    }
+    return {meta, cards};
+  }).filter(g => g.cards.length > 0);
+
+  const totalCards = groups.reduce((s,g) => s + g.cards.length, 0);
+  const totalCopies = groups.reduce((s,g) => s + g.cards.reduce((s2,c) => s2 + cardTotal(c), 0), 0);
+
+  // Inventario: solo lectura, sin botones +/- en ningún caso (independientemente del rol).
+  const groupsHtml = groups.length ? groups.map(g => {
+    const {title, abbr} = splitCollectionName(g.meta.name);
+    const rows = g.cards.map(c => {
+      const color = TYPE_COLORS[c.tipo] || "var(--poke)";
+      const total = cardTotal(c);
+      const variantsHtml = VARIANTS.map(v => `
+        <div class="variant-badge readonly" style="--variant-color:${v.color}">
+          <div class="vrow">
+            <span class="vcount">${c.variantes[v.key] || 0}</span>
+          </div>
+          <span class="lbl">${v.name}</span>
+        </div>`).join("");
+      return `
+      <div class="card-row" style="--type-color:${color}">
+        <div class="num-badge">${escapeHtml(c.numero)}</div>
+        <div class="card-info">
+          <div class="card-name">${escapeHtml(c.nombre)}</div>
+          <div class="card-type">${escapeHtml(c.tipo)}</div>
+        </div>
+        ${variantsHtml}
+        <div class="total-badge">${total}<span class="lbl">Total</span></div>
+      </div>`;
+    }).join("");
+    return `
+    <div class="inventory-group">
+      <div class="inventory-group-title">
+        <span class="sidebar-dot" style="--item-color:${g.meta.accent}"></span>
+        ${escapeHtml(title)}${abbr ? ` <span class="inventory-group-abbr">${escapeHtml(abbr)}</span>` : ""}
+      </div>
+      <div class="list">${rows}</div>
+    </div>`;
+  }).join("") : `
+    <div class="empty-state">
+      <div class="glyph">🔍</div>
+      <p>No hay cartas que coincidan con la búsqueda.</p>
+    </div>`;
+
+  root.innerHTML = `
+  <div class="shell">
+    ${sidebarHtml}
+    <div class="main">
+    <div class="wrap">
+
+      ${userInfoHtml}
+
+      <div class="header">
+        <div class="title-block">
+          <div class="eyebrow">Todas las colecciones</div>
+          <h1>Mi <span style="color:var(--electric-blue)">Inventario</span></h1>
+        </div>
+        <div class="stats">
+          <div class="stat-pill"><span class="num">${totalCards}</span><span class="lbl">Cartas</span></div>
+          <div class="stat-pill"><span class="num">${totalCopies}</span><span class="lbl">Copias</span></div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="Buscar por nombre o número…" value="${escapeHtml(state.search)}">
+        </div>
+      </div>
+
+      <div class="chips">${typeChipsHtml}</div>
+
+      ${groupsHtml}
+
+    </div>
+    </div>
+  </div>`;
+
+  attachEvents();
+}
+
 function attachEvents(){
   document.querySelectorAll(".sidebar-item").forEach(item => {
     item.addEventListener("click", () => {
       selectCollection(item.dataset.collection);
     });
   });
+
+  const logoutBtn = document.getElementById("logoutBtn");
+  if(logoutBtn){
+    logoutBtn.addEventListener("click", async () => {
+      await auth.logout();
+      location.reload();
+    });
+  }
 
   const searchInput = document.getElementById("searchInput");
   if(searchInput){
@@ -318,4 +617,17 @@ function attachEvents(){
   });
 }
 
-loadCollection(state.activeId);
+async function startApp() {
+  if(state.activeId === INVENTORY_ID){
+    if(!allCollectionsLoaded()){
+      render();
+      await loadAllCollections();
+    } else {
+      render();
+    }
+    return;
+  }
+  await loadCollection(state.activeId);
+}
+
+window.auth = auth;
