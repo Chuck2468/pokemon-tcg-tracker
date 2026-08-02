@@ -14,6 +14,8 @@ import scr from "./scr.js";
 import sfa from "./sfa.js";
 import twm from "./twm.js";
 import tef from "./tef.js";
+import mep from "./mep.js";
+import svp from "./svp.js";
 
 export const COLLECTIONS = [
  {
@@ -159,5 +161,31 @@ export const COLLECTIONS = [
     gameSetMax: 162,
     accent: "var(--poke)",
     seed: tef
+  },
+  {
+    id: "bsp",
+    name: "Black Star Promos",
+    eyebrow: "Promos · Trainer Box",
+    accent: "var(--poke)",
+    // Colección compuesta: no tiene seed/gameSetMax propios, sino que agrupa
+    // varias tandas de promos (una por temporada). Cada subcolección se
+    // carga y almacena de forma independiente (mismo storageKey que id),
+    // pero de cara al usuario se presentan juntas bajo "Black Star Promos".
+    subcollections: [
+      {
+        id: "mep",
+        name: "Black Star Promos - MEP",
+        storageKey: "mep-collection",
+        gameSetMax: null, // sin distinción Play Set/Master Set: se muestran las 4 variantes (set real: 110 cartas)
+        seed: mep
+      },
+      {
+        id: "svp",
+        name: "Black Star Promos - SVP",
+        storageKey: "svp-collection",
+        gameSetMax: null, // sin distinción Play Set/Master Set: se muestran las 4 variantes (set real: 225 cartas)
+        seed: svp
+      }
+    ]
   }
 ];

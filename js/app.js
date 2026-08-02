@@ -12,6 +12,7 @@ let state = {
   search: "",
   activeType: "ALL",
   activeStatus: "ALL",
+  onlyFullArt: false,   // filtro exclusivo del Inventario
   saveError: false,
 
   user: null
@@ -90,6 +91,23 @@ function getMeta(id){
   return COLLECTIONS.find(c => c.id === id) || COLLECTIONS[0];
 }
 
+// Una colección "compuesta" (p.ej. Black Star Promos) no tiene seed propio:
+// agrupa varias subcolecciones (MEP, SVP...) que sí lo tienen.
+function isComposite(meta){
+  return !!(meta && meta.subcollections);
+}
+
+// Lista plana de todas las unidades cargables/almacenables: las colecciones
+// normales tal cual, y las subcolecciones de las compuestas. Se usa para
+// cargar datos, comprobar si todo está cargado, y para agrupar el Inventario.
+function leafCollections(){
+  return COLLECTIONS.flatMap(c => isComposite(c) ? c.subcollections : [c]);
+}
+
+function findLeafMeta(id){
+  return leafCollections().find(c => c.id === id) || null;
+}
+
 function toVariantCard(raw){
   // Migrates old {cantidad} shape or fills in a fresh {variantes} shape
   if(raw.variantes){
@@ -114,8 +132,27 @@ function cardTotal(card){
   return VARIANTS.reduce((s,v) => s + (card.variantes[v.key] || 0), 0);
 }
 
+// Las cartas del Set de Juego (id <= gameSetMax) solo pueden ser Normal/Reverse/Holo.
+// Las cartas exclusivas del Set Maestro (más allá del Set de Juego) son siempre FullArt.
+// Si por algún motivo hay stock cargado en una variante "no esperada", se sigue mostrando
+// para no ocultar datos reales.
+function applicableVariants(card, gameSetMax){
+  // gameSetMax === null: colección sin distinción Play Set / Master Set
+  // (p.ej. Black Star Promos), se muestran siempre las 4 variantes.
+  if(gameSetMax === null){
+    return VARIANTS;
+  }
+  const isBaseSet = parseInt(card.id, 10) <= gameSetMax;
+  return VARIANTS.filter(v => {
+    const expected = isBaseSet ? v.key !== "fullart" : v.key === "fullart";
+    const hasStock = (card.variantes[v.key] || 0) > 0;
+    return expected || hasStock;
+  });
+}
+
 async function loadCollectionData(id) {
-  const meta = getMeta(id);
+  const meta = findLeafMeta(id);
+  if(!meta) return;
   // Cartas base de la colección (nombre, tipo, número, etc.)
   const seedCards = meta.seed.map(toVariantCard);
   try {
@@ -152,12 +189,79 @@ async function loadCollection(id) {
   render();
 }
 
+// Precarga en Supabase, a valor 0, las cartas de una colección (o
+// subcolección) que aún no tengan fila propia. No toca las que ya existen,
+// así que es seguro pulsar el botón varias veces sin perder stock ya
+// guardado. Devuelve cuántas filas nuevas se han creado.
+async function initializeCollection(id){
+  const meta = findLeafMeta(id);
+  if(!meta) return {created: 0, total: 0};
+  const rows = await storage.getCollection(id);
+  const existing = new Set(rows.map(row => row.card_id));
+  const seedCards = meta.seed.map(toVariantCard);
+  const missing = seedCards.filter(c => !existing.has(c.id));
+  await Promise.all(missing.map(c => storage.saveCard(id, c)));
+  return {created: missing.length, total: seedCards.length};
+}
+
+// Sincroniza una colección concreta: si es una colección normal, inicializa
+// esa; si es compuesta (Black Star Promos), inicializa todas sus
+// subcolecciones. Devuelve cuántas filas nuevas se han creado en Supabase.
+async function syncCollection(id){
+  const meta = COLLECTIONS.find(c => c.id === id);
+  const leafIds = meta && isComposite(meta) ? meta.subcollections.map(s => s.id) : [id];
+
+  const results = await Promise.all(leafIds.map(lid => initializeCollection(lid)));
+  leafIds.forEach(lid => { state.cache[lid] = undefined; });
+  await Promise.all(leafIds.map(lid => loadCollectionData(lid)));
+
+  return results.reduce((s, r) => s + r.created, 0);
+}
+
+// Sincroniza absolutamente todas las colecciones (todas las hojas: normales
+// + subcolecciones de las compuestas).
+async function syncAllCollections(){
+  const leafIds = leafCollections().map(c => c.id);
+
+  const results = await Promise.all(leafIds.map(lid => initializeCollection(lid)));
+  leafIds.forEach(lid => { state.cache[lid] = undefined; });
+  await Promise.all(leafIds.map(lid => loadCollectionData(lid)));
+
+  return results.reduce((s, r) => s + r.created, 0);
+}
+
+// Handler compartido por los botones "Sync" / "Sync All" del panel de
+// usuario. syncFn es syncCollection(id) o syncAllCollections según el botón.
+async function handleSyncClick(btn, syncFn){
+  if(!btn) return;
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Sincronizando…";
+
+  try {
+    const totalCreated = await syncFn();
+    alert(
+      totalCreated > 0
+        ? `Listo: ${totalCreated} carta(s) nueva(s) sincronizada(s) en Supabase.`
+        : "Todo estaba ya sincronizado en Supabase."
+    );
+  } catch (error) {
+    console.error(error);
+    alert("Hubo un error al sincronizar. Revisa la consola.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+
+  render();
+}
+
 function allCollectionsLoaded(){
-  return COLLECTIONS.every(c => state.cache[c.id] !== undefined);
+  return leafCollections().every(c => state.cache[c.id] !== undefined);
 }
 
 async function loadAllCollections(){
-  const missing = COLLECTIONS.filter(c => state.cache[c.id] === undefined);
+  const missing = leafCollections().filter(c => state.cache[c.id] === undefined);
   await Promise.all(missing.map(c => loadCollectionData(c.id)));
   render();
 }
@@ -171,11 +275,24 @@ function selectCollection(id){
   state.search = "";
   state.activeType = "ALL";
   state.activeStatus = "ALL";
+  state.onlyFullArt = false;
 
   if(id === INVENTORY_ID){
     if(!allCollectionsLoaded()){
       render();
       loadAllCollections();
+    } else {
+      render();
+    }
+    return;
+  }
+
+  const meta = getMeta(id);
+  if(isComposite(meta)){
+    const missing = meta.subcollections.filter(s => state.cache[s.id] === undefined);
+    if(missing.length){
+      render();
+      Promise.all(missing.map(s => loadCollectionData(s.id))).then(render);
     } else {
       render();
     }
@@ -190,12 +307,13 @@ function selectCollection(id){
   }
 }
 
-async function changeVariant(id, variantKey, delta){
-  const cards = state.cache[state.activeId];
+async function changeVariant(collectionId, id, variantKey, delta){
+  const cards = state.cache[collectionId];
+  if(!cards) return;
   const card = cards.find(c => c.id === id);
   if(!card) return;
   card.variantes[variantKey] = Math.max(0, (card.variantes[variantKey] || 0) + delta);
-  await storage.saveCard(state.activeId, card);
+  await storage.saveCard(collectionId, card);
   render();
 }
 
@@ -319,11 +437,20 @@ function renderUnauthorized() {
     });
 }
 
-function buildUserPanelHtml(){
+function buildUserPanelHtml(collectionId){
   if(!state.user) return "";
   const roleName = state.user.role === "admin" ? "Administrador" : "Consulta";
+  const isAdmin = state.user.role === "admin";
+
+  const syncActionsHtml = (isAdmin && collectionId) ? `
+    <div class="sync-actions">
+      <button id="syncBtn" class="sync-btn" data-collection="${collectionId}">Sync</button>
+      <button id="syncAllBtn" class="sync-btn">Sync All</button>
+    </div>` : "";
+
   return `
    <div class="user-panel">
+     ${syncActionsHtml}
      <div class="user-name">👤 ${escapeHtml(state.user.name)}</div>
      <div class="user-role">${roleName}</div>
      <button id="logoutBtn" class="logout-btn">Cerrar sesión</button>
@@ -340,6 +467,11 @@ function render(){
   }
 
   const meta = getMeta(state.activeId);
+
+  if(isComposite(meta)){
+    renderBsp(sidebarHtml, meta);
+    return;
+  }
 
   if(state.cache[state.activeId] === undefined){
     root.innerHTML = `
@@ -358,7 +490,7 @@ function render(){
   const progressJuegoHtml = buildProgressHtml(juego.pct);
   const progressMaestroHtml = buildProgressHtml(maestro.pct);
 
-  const userInfoHtml = buildUserPanelHtml();
+  const userInfoHtml = buildUserPanelHtml(state.activeId);
 
   const statusChipsHtml = ["ALL", "PENDING"].map(s => {
     const label = s === "ALL" ? "Todas" : "Pendientes";
@@ -379,12 +511,12 @@ function render(){
   const rowsHtml = list.length ? list.map(c => {
     const color = TYPE_COLORS[c.tipo] || "var(--poke)";
     const total = cardTotal(c);
-    const variantsHtml = VARIANTS.map(v => `
+    const variantsHtml = applicableVariants(c, meta.gameSetMax).map(v => `
       <div class="variant-badge" style="--variant-color:${v.color}">
         <div class="vrow">
-          <button class="vbtn" data-action="dec" data-id="${c.id}" data-variant="${v.key}"  ${editable ? "" : "disabled"}>−</button>
+          <button class="vbtn" data-action="dec" data-collection="${state.activeId}" data-id="${c.id}" data-variant="${v.key}"  ${editable ? "" : "disabled"}>−</button>
           <span class="vcount">${c.variantes[v.key] || 0}</span>
-          <button class="vbtn" data-action="inc" data-id="${c.id}" data-variant="${v.key}"  ${editable ? "" : "disabled"}>+</button>
+          <button class="vbtn" data-action="inc" data-collection="${state.activeId}" data-id="${c.id}" data-variant="${v.key}"  ${editable ? "" : "disabled"}>+</button>
         </div>
         <span class="lbl">${v.name}</span>
       </div>`).join("");
@@ -473,12 +605,18 @@ function renderInventory(sidebarHtml){
       style="${active ? `background:${color};` : ""}">${escapeHtml(label)}</div>`;
   }).join("");
 
+  const fullArtChipHtml = `<div class="chip ${state.onlyFullArt ? "active" : ""}" id="fullArtToggle"
+    style="${state.onlyFullArt ? `background:var(--v-fullart);` : ""}">Solo FullArt</div>`;
+
   const q = state.search.trim().toLowerCase();
 
-  const groups = COLLECTIONS.map(meta => {
+  const groups = leafCollections().map(meta => {
     let cards = (state.cache[meta.id] || []).filter(card => cardTotal(card) > 0);
     if(state.activeType !== "ALL"){
       cards = cards.filter(card => card.tipo === state.activeType);
+    }
+    if(state.onlyFullArt){
+      cards = cards.filter(card => (card.variantes.fullart || 0) > 0);
     }
     if(q){
       cards = cards.filter(card =>
@@ -498,7 +636,7 @@ function renderInventory(sidebarHtml){
     const rows = g.cards.map(c => {
       const color = TYPE_COLORS[c.tipo] || "var(--poke)";
       const total = cardTotal(c);
-      const variantsHtml = VARIANTS.map(v => `
+      const variantsHtml = applicableVariants(c, g.meta.gameSetMax).map(v => `
         <div class="variant-badge readonly" style="--variant-color:${v.color}">
           <div class="vrow">
             <span class="vcount">${c.variantes[v.key] || 0}</span>
@@ -556,6 +694,144 @@ function renderInventory(sidebarHtml){
       </div>
 
       <div class="chips">${typeChipsHtml}</div>
+      <div class="chips">${fullArtChipHtml}</div>
+
+      ${groupsHtml}
+
+    </div>
+    </div>
+  </div>`;
+
+  attachEvents();
+}
+
+// Editor de stock para una colección compuesta (p.ej. Black Star Promos):
+// como es una agrupación de varias tandas de promos y no un set real, no
+// tiene sentido un % de Play Set / Master Set, así que solo se muestran
+// totales. Por lo demás es editable igual que una colección normal, pero
+// separada visualmente por subcolección (una por temporada).
+function renderBsp(sidebarHtml, meta){
+  const subMetas = meta.subcollections;
+  const loaded = subMetas.every(s => state.cache[s.id] !== undefined);
+
+  if(!loaded){
+    root.innerHTML = `
+    <div class="shell">
+      ${sidebarHtml}
+      <div class="main"><div class="loading">Cargando colección…</div></div>
+    </div>`;
+    attachEvents();
+    return;
+  }
+
+  const editable = state.user?.role === "admin";
+  const userInfoHtml = buildUserPanelHtml(meta.id);
+
+  const statusChipsHtml = ["ALL", "PENDING"].map(s => {
+    const label = s === "ALL" ? "Todas" : "Pendientes";
+    const active = state.activeStatus === s;
+    const color = s === "ALL" ? "var(--ink)" : "var(--pending)";
+    return `<div class="chip ${active ? "active" : ""}" data-status="${s}"
+      style="${active ? `background:${color};` : ""}">${escapeHtml(label)}</div>`;
+  }).join("");
+
+  const typeChipsHtml = ["ALL", ...TYPES].map(t => {
+    const label = t === "ALL" ? "Todos los tipos" : t;
+    const active = state.activeType === t;
+    const color = t === "ALL" ? "var(--ink)" : TYPE_COLORS[t];
+    return `<div class="chip ${active ? "active" : ""}" data-type="${t}"
+      style="${active ? `background:${color};` : ""}">${escapeHtml(label)}</div>`;
+  }).join("");
+
+  const q = state.search.trim().toLowerCase();
+
+  const groups = subMetas.map(sub => {
+    let cards = state.cache[sub.id] || [];
+    if(state.activeStatus === "PENDING"){
+      cards = cards.filter(c => cardTotal(c) === 0);
+    }
+    if(state.activeType !== "ALL"){
+      cards = cards.filter(c => c.tipo === state.activeType);
+    }
+    if(q){
+      cards = cards.filter(c =>
+        c.nombre.toLowerCase().includes(q) ||
+        c.numero.toLowerCase().includes(q)
+      );
+    }
+    return {sub, cards};
+  });
+
+  const totalCards = groups.reduce((s,g) => s + g.cards.length, 0);
+  const totalCopies = groups.reduce((s,g) => s + g.cards.reduce((s2,c) => s2 + cardTotal(c), 0), 0);
+
+  const groupsHtml = groups.map(g => {
+    const rows = g.cards.length ? g.cards.map(c => {
+      const color = TYPE_COLORS[c.tipo] || "var(--poke)";
+      const total = cardTotal(c);
+      const variantsHtml = applicableVariants(c, g.sub.gameSetMax).map(v => `
+        <div class="variant-badge" style="--variant-color:${v.color}">
+          <div class="vrow">
+            <button class="vbtn" data-action="dec" data-collection="${g.sub.id}" data-id="${c.id}" data-variant="${v.key}" ${editable ? "" : "disabled"}>−</button>
+            <span class="vcount">${c.variantes[v.key] || 0}</span>
+            <button class="vbtn" data-action="inc" data-collection="${g.sub.id}" data-id="${c.id}" data-variant="${v.key}" ${editable ? "" : "disabled"}>+</button>
+          </div>
+          <span class="lbl">${v.name}</span>
+        </div>`).join("");
+      return `
+      <div class="card-row ${total === 0 ? "zero" : ""}" style="--type-color:${color}">
+        <div class="num-badge">${escapeHtml(c.numero)}</div>
+        <div class="card-info">
+          <div class="card-name">${escapeHtml(c.nombre)}</div>
+          <div class="card-type">${escapeHtml(c.tipo)}</div>
+        </div>
+        ${variantsHtml}
+        <div class="total-badge">${total}<span class="lbl">Total</span></div>
+      </div>`;
+    }).join("") : `
+      <div class="empty-state">
+        <div class="glyph">🔍</div>
+        <p>No hay cartas que coincidan con la búsqueda.</p>
+      </div>`;
+
+    return `
+    <div class="inventory-group">
+      <div class="inventory-group-title">
+        <span class="sidebar-dot" style="--item-color:${meta.accent}"></span>
+        ${escapeHtml(g.sub.name)}
+      </div>
+      <div class="list">${rows}</div>
+    </div>`;
+  }).join("");
+
+  root.innerHTML = `
+  <div class="shell">
+    ${sidebarHtml}
+    <div class="main">
+    <div class="wrap">
+
+      ${userInfoHtml}
+
+      <div class="header">
+        <div class="title-block">
+          <div class="eyebrow">${escapeHtml(meta.eyebrow)}</div>
+          <h1><span style="color:${meta.accent}">${escapeHtml(meta.name)}</span></h1>
+        </div>
+        <div class="stats">
+          <div class="stat-pill"><span class="num">${totalCopies}</span><span class="lbl">Copias</span></div>
+          <div class="stat-pill"><span class="num">${totalCards}</span><span class="lbl">Cartas</span></div>
+        </div>
+      </div>
+
+
+      <div class="toolbar">
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="Buscar por nombre o número…" value="${escapeHtml(state.search)}">
+        </div>
+      </div>
+
+      <div class="chips">${statusChipsHtml}</div>
+      <div class="chips">${typeChipsHtml}</div>
 
       ${groupsHtml}
 
@@ -573,11 +849,33 @@ function attachEvents(){
     });
   });
 
+  const syncBtn = document.getElementById("syncBtn");
+  if(syncBtn){
+    syncBtn.addEventListener("click", () => {
+      handleSyncClick(syncBtn, () => syncCollection(syncBtn.dataset.collection));
+    });
+  }
+
+  const syncAllBtn = document.getElementById("syncAllBtn");
+  if(syncAllBtn){
+    syncAllBtn.addEventListener("click", () => {
+      handleSyncClick(syncAllBtn, () => syncAllCollections());
+    });
+  }
+
   const logoutBtn = document.getElementById("logoutBtn");
   if(logoutBtn){
     logoutBtn.addEventListener("click", async () => {
       await auth.logout();
       location.reload();
+    });
+  }
+
+  const fullArtToggle = document.getElementById("fullArtToggle");
+  if(fullArtToggle){
+    fullArtToggle.addEventListener("click", () => {
+      state.onlyFullArt = !state.onlyFullArt;
+      render();
     });
   }
 
@@ -608,11 +906,12 @@ function attachEvents(){
 
   document.querySelectorAll("[data-action]").forEach(btn => {
     btn.addEventListener("click", () => {
+      const collectionId = btn.dataset.collection;
       const id = btn.dataset.id;
       const action = btn.dataset.action;
       const variant = btn.dataset.variant;
-      if(action === "inc") changeVariant(id, variant, 1);
-      if(action === "dec") changeVariant(id, variant, -1);
+      if(action === "inc") changeVariant(collectionId, id, variant, 1);
+      if(action === "dec") changeVariant(collectionId, id, variant, -1);
     });
   });
 }

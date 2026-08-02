@@ -529,4 +529,31 @@
     color:var(--partidario);
   }
 
+  /* ---- Sync / Sync All: admin, alineados a la izquierda del user-panel ---- */
+  .sync-actions{
+    display:flex;
+    gap:8px;
+    margin-right:auto; /* empuja el resto (nombre/rol/logout) al extremo derecho */
+  }
+  .sync-btn{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11.5px;
+    padding:8px 0;
+    width:88px;
+    border-radius:8px;
+    border:1px solid var(--poke);
+    background:transparent;
+    color:var(--poke);
+    cursor:pointer;
+    text-align:center;
+    transition:all .12s ease;
+  }
+  .sync-btn:hover:not(:disabled){
+    background:var(--poke-soft);
+  }
+  .sync-btn:disabled{
+    opacity:.5;
+    cursor:default;
+  }
+
   ::selection{background:var(--poke); color:#fff;}
