@@ -556,4 +556,32 @@
     cursor:default;
   }
 
+  /* ---- Botón "Continuar con Google" (pantalla de login) ---- */
+  .google-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    padding:15px 30px;
+    border-radius:30px;
+    border:1px solid #3c4043;
+    background:#1f1f1f;
+    color:#fff;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:15px;
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  .google-btn:hover{
+    background:#2b2b2b;
+    border-color:#5f6368;
+  }
+  .google-btn:active{
+    background:#141414;
+  }
+  .google-icon{
+    flex-shrink:0;
+  }
+
   ::selection{background:var(--poke); color:#fff;}
