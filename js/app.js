@@ -526,7 +526,7 @@ function render(){
           <span class="vcount">${c.variantes[v.key] || 0}</span>
           <button class="vbtn" data-action="inc" data-collection="${state.activeId}" data-id="${c.id}" data-variant="${v.key}"  ${editable ? "" : "disabled"}>+</button>
         </div>
-        <span class="lbl">${v.name}</span>
+        <span class="lbl"><span class="lbl-full">${escapeHtml(v.name)}</span><span class="lbl-short">${escapeHtml(v.short || v.name)}</span></span>
       </div>`).join("");
     return `
     <div class="card-row ${total === 0 ? "zero" : ""}" style="--type-color:${color}">
@@ -651,7 +651,7 @@ function renderInventory(sidebarHtml){
           <div class="vrow">
             <span class="vcount">${c.variantes[v.key] || 0}</span>
           </div>
-          <span class="lbl">${v.name}</span>
+          <span class="lbl"><span class="lbl-full">${escapeHtml(v.name)}</span><span class="lbl-short">${escapeHtml(v.short || v.name)}</span></span>
         </div>`).join("");
       return `
       <div class="card-row" style="--type-color:${color}">
@@ -788,7 +788,7 @@ function renderBsp(sidebarHtml, meta){
             <span class="vcount">${c.variantes[v.key] || 0}</span>
             <button class="vbtn" data-action="inc" data-collection="${g.sub.id}" data-id="${c.id}" data-variant="${v.key}" ${editable ? "" : "disabled"}>+</button>
           </div>
-          <span class="lbl">${v.name}</span>
+          <span class="lbl"><span class="lbl-full">${escapeHtml(v.name)}</span><span class="lbl-short">${escapeHtml(v.short || v.name)}</span></span>
         </div>`).join("");
       return `
       <div class="card-row ${total === 0 ? "zero" : ""}" style="--type-color:${color}">

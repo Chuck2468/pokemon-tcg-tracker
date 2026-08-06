@@ -440,31 +440,70 @@
     margin-top:3px;
     white-space:nowrap;
   }
+  .lbl-short{display:none;}
+  .lbl-full{display:inline;}
 
   @media (max-width:640px){
-    .variant-badge{padding:3px 4px 4px;}
-    .variant-badge .vrow{gap:3px;}
     .card-info{min-width:44px;}
 
-    /* Apilar la fila de carta en dos líneas en vez de cortarse por el
-       ancho de pantalla: número+nombre+total arriba, variantes abajo. */
+    /* 3 líneas en móvil: número / nombre+tipo / variantes+total juntos. */
     .card-row{
       flex-wrap:wrap;
-      row-gap:8px;
+      row-gap:4px;
     }
     .card-main{
       order:1;
-      flex:1 1 auto;
+      flex:1 1 100%;
+      display:flex;
+      flex-direction:column;
+      align-items:flex-start;
+      gap:2px;
     }
-    .total-badge{
-      order:2;
+    .num-badge{
+      font-size:9.5px;
+      padding:2px 6px;
+    }
+    .card-name{
+      font-size:12.5px;
+    }
+    .card-type{
+      font-size:9px;
     }
     .variants-row{
-      order:3;
-      flex:1 1 100%;
+      order:2;
+      flex:1 1 auto;
       flex-wrap:wrap;
+      gap:5px;
       justify-content:flex-start;
     }
+    .total-badge{
+      order:3;
+      flex-shrink:0;
+      font-size:13px;
+      padding:3px 6px;
+      min-width:30px;
+    }
+    .total-badge .lbl{
+      font-size:7px;
+    }
+
+    .variant-badge{padding:2px 3px 3px;}
+    .variant-badge .vrow{gap:2px;}
+    .variant-badge .vbtn{
+      font-size:12px;
+      padding:1px 2px;
+    }
+    .variant-badge .vcount{
+      font-size:11px;
+      min-width:11px;
+    }
+    .variant-badge .lbl{
+      font-size:7px;
+      margin-top:2px;
+    }
+
+    .lbl-full{display:none;}
+    .lbl-short{display:inline;}
   }
 
   .empty-state{
@@ -544,7 +583,7 @@
   }
 
   @media (max-width:640px){
-    .variant-badge.readonly{width:62px; padding:5px 3px;}
+    .variant-badge.readonly{width:52px; padding:3px 2px;}
   }
 
   /* ---- User panel (name / role / logout) ---- */
