@@ -945,3 +945,4 @@ async function startApp() {
 
 window.auth = auth;
 
+

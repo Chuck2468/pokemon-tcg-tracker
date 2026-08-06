@@ -22,3 +22,4 @@ export const VARIANTS = [
   {key:"holo", label:"H", name:"Holográfica", short:"HOLO", color:"var(--v-holo)"},
   {key:"fullart", label:"FA", name:"FullArt", short:"FullArt", color:"var(--v-fullart)"}
 ];
+

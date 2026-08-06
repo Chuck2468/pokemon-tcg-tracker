@@ -682,6 +682,4 @@
   .google-icon{
     flex-shrink:0;
   }
-
-  
   ::selection{background:var(--poke); color:#fff;}
