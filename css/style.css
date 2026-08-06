@@ -35,6 +35,21 @@
   }
 
   *{box-sizing:border-box;}
+
+  /* Evita que Safari/Chrome en móvil "infle" el tamaño del texto en pantallas
+     estrechas (text inflation), y quita el estilo nativo que iOS/Android
+     aplican por defecto a los <button> — sin esto, botones con el mismo CSS
+     se ven más grandes o con aspecto distinto en móvil que en escritorio. */
+  html{
+    -webkit-text-size-adjust:100%;
+    text-size-adjust:100%;
+  }
+  button, input{
+    font-family:inherit;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+
   body{margin:0;background:transparent;color:var(--ink);}
 
   .shell{
@@ -142,6 +157,14 @@
     .sidebar-item{flex-shrink:0; white-space:nowrap; align-items:center;}
     .sidebar-item .sidebar-dot{margin-top:0;}
     .sidebar-item-inventory{border-bottom:none; margin-bottom:0; padding-bottom:10px;}
+
+    /* Las barras de progreso no caben en una línea en móvil: en vez de
+       partir cada frase por la mitad, se apilan etiqueta y valor. */
+    .progress-strip .row{
+      flex-direction:column;
+      align-items:flex-start;
+      gap:2px;
+    }
   }
 
   .wrap{max-width:920px;margin:0 auto;}
@@ -301,6 +324,23 @@
   .card-row:hover{background:var(--bg-panel-raised);}
   .card-row.zero{opacity:.35;}
 
+  /* card-main agrupa número+nombre; variants-row agrupa las variantes.
+     En desktop son simplemente dos ítems más del flex row de .card-row
+     (mismo orden de siempre: número, nombre, variantes, total). En móvil
+     se reordenan y apilan en dos líneas, ver media query más abajo. */
+  .card-main{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex:1;
+    min-width:0;
+  }
+  .variants-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
   .num-badge{
     font-family:'JetBrains Mono',monospace;
     font-size:11px;
@@ -405,6 +445,26 @@
     .variant-badge{padding:3px 4px 4px;}
     .variant-badge .vrow{gap:3px;}
     .card-info{min-width:44px;}
+
+    /* Apilar la fila de carta en dos líneas en vez de cortarse por el
+       ancho de pantalla: número+nombre+total arriba, variantes abajo. */
+    .card-row{
+      flex-wrap:wrap;
+      row-gap:8px;
+    }
+    .card-main{
+      order:1;
+      flex:1 1 auto;
+    }
+    .total-badge{
+      order:2;
+    }
+    .variants-row{
+      order:3;
+      flex:1 1 100%;
+      flex-wrap:wrap;
+      justify-content:flex-start;
+    }
   }
 
   .empty-state{

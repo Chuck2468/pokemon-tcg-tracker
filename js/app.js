@@ -530,12 +530,14 @@ function render(){
       </div>`).join("");
     return `
     <div class="card-row ${total === 0 ? "zero" : ""}" style="--type-color:${color}">
-      <div class="num-badge">${escapeHtml(c.numero)}</div>
-      <div class="card-info">
-        <div class="card-name">${escapeHtml(c.nombre)}</div>
-        <div class="card-type">${escapeHtml(c.tipo)}</div>
+      <div class="card-main">
+        <div class="num-badge">${escapeHtml(c.numero)}</div>
+        <div class="card-info">
+          <div class="card-name">${escapeHtml(c.nombre)}</div>
+          <div class="card-type">${escapeHtml(c.tipo)}</div>
+        </div>
       </div>
-      ${variantsHtml}
+      <div class="variants-row">${variantsHtml}</div>
       <div class="total-badge">${total}<span class="lbl">Total</span></div>
     </div>`;
   }).join("") : `
@@ -653,12 +655,14 @@ function renderInventory(sidebarHtml){
         </div>`).join("");
       return `
       <div class="card-row" style="--type-color:${color}">
-        <div class="num-badge">${escapeHtml(c.numero)}</div>
-        <div class="card-info">
-          <div class="card-name">${escapeHtml(c.nombre)}</div>
-          <div class="card-type">${escapeHtml(c.tipo)}</div>
+        <div class="card-main">
+          <div class="num-badge">${escapeHtml(c.numero)}</div>
+          <div class="card-info">
+            <div class="card-name">${escapeHtml(c.nombre)}</div>
+            <div class="card-type">${escapeHtml(c.tipo)}</div>
+          </div>
         </div>
-        ${variantsHtml}
+        <div class="variants-row">${variantsHtml}</div>
         <div class="total-badge">${total}<span class="lbl">Total</span></div>
       </div>`;
     }).join("");
@@ -788,12 +792,14 @@ function renderBsp(sidebarHtml, meta){
         </div>`).join("");
       return `
       <div class="card-row ${total === 0 ? "zero" : ""}" style="--type-color:${color}">
-        <div class="num-badge">${escapeHtml(c.numero)}</div>
-        <div class="card-info">
-          <div class="card-name">${escapeHtml(c.nombre)}</div>
-          <div class="card-type">${escapeHtml(c.tipo)}</div>
+        <div class="card-main">
+          <div class="num-badge">${escapeHtml(c.numero)}</div>
+          <div class="card-info">
+            <div class="card-name">${escapeHtml(c.nombre)}</div>
+            <div class="card-type">${escapeHtml(c.tipo)}</div>
+          </div>
         </div>
-        ${variantsHtml}
+        <div class="variants-row">${variantsHtml}</div>
         <div class="total-badge">${total}<span class="lbl">Total</span></div>
       </div>`;
     }).join("") : `
