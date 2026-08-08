@@ -449,7 +449,7 @@
     /* 3 líneas en móvil: número / nombre+tipo / variantes+total juntos. */
     .card-row{
       flex-wrap:wrap;
-      row-gap:4px;
+      row-gap:7px;
     }
     .card-main{
       order:1;
@@ -457,7 +457,7 @@
       display:flex;
       flex-direction:column;
       align-items:flex-start;
-      gap:2px;
+      gap:5px;
     }
     .num-badge{
       font-size:9.5px;
