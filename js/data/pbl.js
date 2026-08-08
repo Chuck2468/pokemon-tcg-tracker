@@ -104,7 +104,7 @@ export default [
   { id: "103", nombre: "Mega-Excadrill ex", tipo: "Pokémon", numero: "103/084", set: "PBL", variantes: { normal: 0, reverse: 0, holo: 0, fullart: 0 } },
   { id: "104", nombre: "Pulsera Osada", tipo: "Herramienta", numero: "104/084", set: "PBL", variantes: { normal: 0, reverse: 0, holo: 0, fullart: 0 } },
   { id: "105", nombre: "Martillo Demoledor", tipo: "Objeto", numero: "105/084", set: "PBL", variantes: { normal: 0, reverse: 0, holo: 0, fullart: 0 } },
-  { id: "106", nombre: "Campana Oscura", tipo: "Objeto", numero: "106/084", set: "PBL", variantes: { normal: 0, reverse: 0, holo: 0, fullart: 0 } },
+  { id: "106", nombre: "Campanilla Oscuridad", tipo: "Objeto", numero: "106/084", set: "PBL", variantes: { normal: 0, reverse: 0, holo: 0, fullart: 0 } },
   { id: "107", nombre: "Interruptor de Energía", tipo: "Objeto", numero: "107/084", set: "PBL", variantes: { normal: 0, reverse: 0, holo: 0, fullart: 0 } },
   { id: "108", nombre: "Combate Final de Gladio", tipo: "Partidario", numero: "108/084", set: "PBL", variantes: { normal: 0, reverse: 0, holo: 0, fullart: 1 } },
   { id: "109", nombre: "Inma", tipo: "Partidario", numero: "109/084", set: "PBL", variantes: { normal: 0, reverse: 0, holo: 0, fullart: 0 } },
