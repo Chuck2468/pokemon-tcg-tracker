@@ -24,6 +24,8 @@ export const COLLECTIONS = [
     eyebrow: "Set PBL · Trainer Box",
     storageKey: "pbl-collection",
     gameSetMax: 84,
+    tcgdexSeries: "me",
+    tcgdexSet: "me05",
     accent: "var(--poke)",
     seed: pbl,
   },
@@ -33,6 +35,8 @@ export const COLLECTIONS = [
     eyebrow: "Set CRI · Trainer Box",
     storageKey: "cri-collection",
     gameSetMax: 86,
+    tcgdexSeries: "me",
+    tcgdexSet: "me04",
     accent: "var(--poke)",
     seed: cri
   },
@@ -42,6 +46,8 @@ export const COLLECTIONS = [
     eyebrow: "Set POR · Trainer Box",
     storageKey: "por-collection",
     gameSetMax: 88,
+    tcgdexSeries: "me",
+    tcgdexSet: "me03",
     accent: "var(--poke)",
     seed: por
   },
@@ -51,6 +57,8 @@ export const COLLECTIONS = [
     eyebrow: "Set ASC · Trainer Box",
     storageKey: "asc-collection",
     gameSetMax: 217,
+    tcgdexSeries: "me",
+    tcgdexSet: "me02.5",
     accent: "var(--poke)",
     seed: asc
   },
@@ -60,6 +68,8 @@ export const COLLECTIONS = [
     eyebrow: "Set PFL · Trainer Box",
     storageKey: "pfl-collection",
     gameSetMax: 94,
+    tcgdexSeries: "me",
+    tcgdexSet: "me02",
     accent: "var(--poke)",
     seed: pfl
   },
@@ -69,6 +79,8 @@ export const COLLECTIONS = [
     eyebrow: "Set MEG · Trainer Box",
     storageKey: "meg-collection",
     gameSetMax: 132,
+    tcgdexSeries: "me",
+    tcgdexSet: "me01",
     accent: "var(--poke)",
     seed: meg
   },
@@ -78,6 +90,8 @@ export const COLLECTIONS = [
     eyebrow: "Set BLK · Trainer Box",
     storageKey: "blk-collection",
     gameSetMax: 86,
+    tcgdexSeries: "sv",
+    tcgdexSet: "sv10.5b",
     accent: "var(--poke)",
     seed: blk
   },
@@ -87,6 +101,8 @@ export const COLLECTIONS = [
     eyebrow: "Set WHT · Trainer Box",
     storageKey: "wht-collection",
     gameSetMax: 86,
+    tcgdexSeries: "sv",
+    tcgdexSet: "sv10.5w",
     accent: "var(--poke)",
     seed: wht
   },
@@ -96,6 +112,8 @@ export const COLLECTIONS = [
     eyebrow: "Set DRI · Trainer Box",
     storageKey: "dri-collection",
     gameSetMax: 182,
+    tcgdexSeries: "sv",
+    tcgdexSet: "sv10",
     accent: "var(--poke)",
     seed: dri
   },
@@ -105,6 +123,8 @@ export const COLLECTIONS = [
     eyebrow: "Set JTG · Trainer Box",
     storageKey: "jtg-collection",
     gameSetMax: 159,
+    tcgdexSeries: "sv",
+    tcgdexSet: "sv09",
     accent: "var(--poke)",
     seed: jtg
   },
@@ -114,6 +134,8 @@ export const COLLECTIONS = [
     eyebrow: "Set PRE · Trainer Box",
     storageKey: "pre-collection",
     gameSetMax: 131,
+    tcgdexSeries: "sv",
+    tcgdexSet: "sv08.5",
     accent: "var(--poke)",
     seed: pre
   },
@@ -123,6 +145,8 @@ export const COLLECTIONS = [
     eyebrow: "Set SSP · Trainer Box",
     storageKey: "ssp-collection",
     gameSetMax: 191,
+    tcgdexSeries: "sv",
+    tcgdexSet: "sv08",
     accent: "var(--poke)",
     seed: ssp
   },
@@ -132,6 +156,8 @@ export const COLLECTIONS = [
     eyebrow: "Set SCR · Trainer Box",
     storageKey: "scr-collection",
     gameSetMax: 142,
+    tcgdexSeries: "sv",
+    tcgdexSet: "sv07",
     accent: "var(--poke)",
     seed: scr
   },
@@ -141,6 +167,8 @@ export const COLLECTIONS = [
     eyebrow: "Set SFA · Trainer Box",
     storageKey: "sfa-collection",
     gameSetMax: 64,
+    tcgdexSeries: "sv",
+    tcgdexSet: "sv06.5",
     accent: "var(--poke)",
     seed: sfa
   },
@@ -150,6 +178,8 @@ export const COLLECTIONS = [
     eyebrow: "Set TWM · Trainer Box",
     storageKey: "twm-collection",
     gameSetMax: 167,
+    tcgdexSeries: "sv",
+    tcgdexSet: "sv06",
     accent: "var(--poke)",
     seed: twm
   },
@@ -159,6 +189,8 @@ export const COLLECTIONS = [
     eyebrow: "Set TEF · Trainer Box",
     storageKey: "tef-collection",
     gameSetMax: 162,
+    tcgdexSeries: "sv",
+    tcgdexSet: "sv05",
     accent: "var(--poke)",
     seed: tef
   },
@@ -177,6 +209,8 @@ export const COLLECTIONS = [
         name: "Black Star Promos - MEP",
         storageKey: "mep-collection",
         gameSetMax: null, // sin distinción Play Set/Master Set: se muestran las 4 variantes (set real: 110 cartas)
+        tcgdexSeries: "me",
+        tcgdexSet: "mep",
         seed: mep
       },
       {
@@ -184,6 +218,8 @@ export const COLLECTIONS = [
         name: "Black Star Promos - SVP",
         storageKey: "svp-collection",
         gameSetMax: null, // sin distinción Play Set/Master Set: se muestran las 4 variantes (set real: 225 cartas)
+        tcgdexSeries: "sv",
+        tcgdexSet: "svp",
         seed: svp
       }
     ]

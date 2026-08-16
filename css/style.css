@@ -320,6 +320,7 @@
     align-items:center;
     gap:8px;
     transition:background .12s ease;
+    cursor:pointer;
   }
   .card-row:hover{background:var(--bg-panel-raised);}
   .card-row.zero{opacity:.35;}
@@ -683,3 +684,57 @@
     flex-shrink:0;
   }
   ::selection{background:var(--poke); color:#fff;}
+
+  /* ---- Modal de imagen de carta ---- */
+  .image-modal{
+    position:fixed;
+    inset:0;
+    z-index:1000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .image-modal.hidden{display:none;}
+  .image-modal-backdrop{
+    position:absolute;
+    inset:0;
+    background:rgba(10,11,16,.82);
+    backdrop-filter:blur(2px);
+  }
+  .image-modal-content{
+    position:relative;
+    z-index:1;
+    max-width:min(90vw, 480px);
+    max-height:88vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .image-modal-content img{
+    max-width:100%;
+    max-height:88vh;
+    border-radius:14px;
+    box-shadow:0 20px 60px rgba(0,0,0,.55);
+    background:var(--bg-panel);
+  }
+  .image-modal-close{
+    position:absolute;
+    top:-14px;
+    right:-14px;
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    border:1px solid var(--line);
+    background:var(--bg-panel-raised);
+    color:var(--ink);
+    font-size:20px;
+    line-height:1;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .image-modal-close:hover{
+    border-color:var(--poke);
+    color:var(--poke);
+  }

@@ -81,6 +81,53 @@ auth.getSession().then(handleSession);
 
 const root = document.getElementById("root");
 
+// ---- Modal de imagen de carta ----
+// El modal vive fuera de #root (se crea una sola vez y no se destruye en
+// cada render), para no perder su estado ni tener que re-engancharle
+// listeners cada vez que se redibuja la app.
+function buildImageUrl(series, set, cardId){
+  return `https://assets.tcgdex.net/es/${series}/${set}/${cardId}/high.png`;
+}
+
+let imageModalEl = null;
+
+function ensureImageModal(){
+  if(imageModalEl) return imageModalEl;
+  const modal = document.createElement("div");
+  modal.id = "cardImageModal";
+  modal.className = "image-modal hidden";
+  modal.innerHTML = `
+    <div class="image-modal-backdrop"></div>
+    <div class="image-modal-content">
+      <button class="image-modal-close" type="button" aria-label="Cerrar">×</button>
+      <img id="cardImageModalImg" alt="Carta" />
+    </div>`;
+  document.body.appendChild(modal);
+
+  modal.querySelector(".image-modal-backdrop").addEventListener("click", closeCardImage);
+  modal.querySelector(".image-modal-close").addEventListener("click", closeCardImage);
+  document.addEventListener("keydown", (e) => {
+    if(e.key === "Escape") closeCardImage();
+  });
+
+  imageModalEl = modal;
+  return modal;
+}
+
+function openCardImage(series, set, cardId){
+  const modal = ensureImageModal();
+  const img = modal.querySelector("#cardImageModalImg");
+  img.src = buildImageUrl(series, set, cardId);
+  modal.classList.remove("hidden");
+}
+
+function closeCardImage(){
+  if(!imageModalEl) return;
+  imageModalEl.classList.add("hidden");
+  const img = imageModalEl.querySelector("#cardImageModalImg");
+  img.src = "";
+}
+
 function escapeHtml(str){
   const d = document.createElement("div");
   d.textContent = str;
@@ -529,7 +576,7 @@ function render(){
         <span class="lbl"><span class="lbl-full">${escapeHtml(v.name)}</span><span class="lbl-short">${escapeHtml(v.short || v.name)}</span></span>
       </div>`).join("");
     return `
-    <div class="card-row ${total === 0 ? "zero" : ""}" style="--type-color:${color}">
+    <div class="card-row ${total === 0 ? "zero" : ""}" style="--type-color:${color}" data-series="${escapeHtml(meta.tcgdexSeries)}" data-set="${escapeHtml(meta.tcgdexSet)}" data-cardid="${escapeHtml(c.id)}">
       <div class="card-main">
         <div class="num-badge">${escapeHtml(c.numero)}</div>
         <div class="card-info">
@@ -654,7 +701,7 @@ function renderInventory(sidebarHtml){
           <span class="lbl"><span class="lbl-full">${escapeHtml(v.name)}</span><span class="lbl-short">${escapeHtml(v.short || v.name)}</span></span>
         </div>`).join("");
       return `
-      <div class="card-row" style="--type-color:${color}">
+      <div class="card-row" style="--type-color:${color}" data-series="${escapeHtml(g.meta.tcgdexSeries)}" data-set="${escapeHtml(g.meta.tcgdexSet)}" data-cardid="${escapeHtml(c.id)}">
         <div class="card-main">
           <div class="num-badge">${escapeHtml(c.numero)}</div>
           <div class="card-info">
@@ -791,7 +838,7 @@ function renderBsp(sidebarHtml, meta){
           <span class="lbl"><span class="lbl-full">${escapeHtml(v.name)}</span><span class="lbl-short">${escapeHtml(v.short || v.name)}</span></span>
         </div>`).join("");
       return `
-      <div class="card-row ${total === 0 ? "zero" : ""}" style="--type-color:${color}">
+      <div class="card-row ${total === 0 ? "zero" : ""}" style="--type-color:${color}" data-series="${escapeHtml(g.sub.tcgdexSeries)}" data-set="${escapeHtml(g.sub.tcgdexSet)}" data-cardid="${escapeHtml(c.id)}">
         <div class="card-main">
           <div class="num-badge">${escapeHtml(c.numero)}</div>
           <div class="card-info">
@@ -915,6 +962,15 @@ function attachEvents(){
     chip.addEventListener("click", () => {
       state.activeType = chip.dataset.type;
       render();
+    });
+  });
+
+  document.querySelectorAll(".card-row[data-cardid]").forEach(row => {
+    row.addEventListener("click", (e) => {
+      // No abrir la imagen si el click viene de un botón +/- de variante.
+      if(e.target.closest(".vbtn")) return;
+      const { series, set, cardid } = row.dataset;
+      if(series && set && cardid) openCardImage(series, set, cardid);
     });
   });
 
