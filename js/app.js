@@ -86,7 +86,7 @@ const root = document.getElementById("root");
 // cada render), para no perder su estado ni tener que re-engancharle
 // listeners cada vez que se redibuja la app.
 function buildImageUrl(series, set, cardId){
-  return `https://assets.tcgdex.net/es/${series}/${set}/${cardId}/high.png`;
+  return `https://assets.tcgdex.net/es/${series}/${set}/${cardId}/high.webp`;
 }
 
 let imageModalEl = null;

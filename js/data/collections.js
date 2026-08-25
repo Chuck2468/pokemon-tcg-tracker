@@ -14,6 +14,16 @@ import scr from "./scr.js";
 import sfa from "./sfa.js";
 import twm from "./twm.js";
 import tef from "./tef.js";
+import paf from "./paf.js";
+import par from "./par.js";
+import mew from "./mew.js";
+import obf from "./obf.js";
+import pal from "./pal.js";
+import svi from "./svi.js";
+import brs from "./brs.js";
+import fst from "./fst.js";
+import ssh from "./ssh.js";
+import flf from "./flf.js";
 import mep from "./mep.js";
 import svp from "./svp.js";
 
@@ -194,6 +204,116 @@ export const COLLECTIONS = [
     accent: "var(--poke)",
     seed: tef
   },
+  {
+    id: "paf",
+    name: "Destinos de Paldea [PAF]",
+    eyebrow: "Set PAF · Trainer Box",
+    storageKey: "paf-collection",
+    gameSetMax: 91,
+    tcgdexSeries: "sv",
+    tcgdexSet: "sv04.5",
+    accent: "var(--poke)",
+    seed: paf
+  },
+  {
+    id: "par",
+    name: "Brecha Paradójica [PAR]",
+    eyebrow: "Set PAR · Trainer Box",
+    storageKey: "par-collection",
+    gameSetMax: 182,
+    tcgdexSeries: "sv",
+    tcgdexSet: "sv04",
+    accent: "var(--poke)",
+    seed: par
+  },
+  {
+    id: "mew",
+    name: "Pokémon 151 [MEW]",
+    eyebrow: "Set MEW · Trainer Box",
+    storageKey: "mew-collection",
+    gameSetMax: 165,
+    tcgdexSeries: "sv",
+    tcgdexSet: "sv03.5",
+    accent: "var(--poke)",
+    seed: mew
+  },
+  {
+    id: "obf",
+    name: "Llamas Obsidianas [OBF]",
+    eyebrow: "Set OBF · Trainer Box",
+    storageKey: "obf-collection",
+    gameSetMax: 197,
+    tcgdexSeries: "sv",
+    tcgdexSet: "sv03",
+    accent: "var(--poke)",
+    seed: obf
+  },
+  {
+    id: "pal",
+    name: "Evoluciones en Paldea [PAL]",
+    eyebrow: "Set PAL · Trainer Box",
+    storageKey: "pal-collection",
+    gameSetMax: 193,
+    tcgdexSeries: "sv",
+    tcgdexSet: "sv02",
+    accent: "var(--poke)",
+    seed: pal
+  },
+  {
+    id: "svi",
+    name: "Escarlata y Púrpura [SVI]",
+    eyebrow: "Set SVI · Trainer Box",
+    storageKey: "svi-collection",
+    gameSetMax: 198,
+    tcgdexSeries: "sv",
+    tcgdexSet: "sv01",
+    accent: "var(--poke)",
+    seed: svi
+  },
+  {
+    id: "brs",
+    name: "Astros Brillantes [BRS]",
+    eyebrow: "Set BRS · Trainer Box",
+    storageKey: "brs-collection",
+    gameSetMax: 165,
+    tcgdexSeries: "swsh",
+    tcgdexSet: "swsh9",
+    accent: "var(--poke)",
+    seed: brs
+  },
+  {
+    id: "fst",
+    name: "Golpe Fusión [FST]",
+    eyebrow: "Set FST · Trainer Box",
+    storageKey: "fst-collection",
+    gameSetMax: 264,
+    tcgdexSeries: "swsh",
+    tcgdexSet: "swsh8",
+    accent: "var(--poke)",
+    seed: fst
+  },
+  {
+    id: "ssh",
+    name: "Espada y Escudo [SSH]",
+    eyebrow: "Set SSH · Trainer Box",
+    storageKey: "ssh-collection",
+    gameSetMax: 202,
+    tcgdexSeries: "swsh",
+    tcgdexSet: "swsh1",
+    accent: "var(--poke)",
+    seed: ssh
+  },
+  {
+    id: "flf",
+    name: "Destellos de Fuego [FLF]",
+    eyebrow: "Set FLF · Trainer Box",
+    storageKey: "flf-collection",
+    gameSetMax: 106,
+    tcgdexSeries: "xy",
+    tcgdexSet: "xy2",
+    accent: "var(--poke)",
+    seed: flf
+  },                                           
   {
     id: "bsp",
     name: "Black Star Promos",
