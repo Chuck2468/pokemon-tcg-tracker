@@ -3,20 +3,28 @@ import { storage } from "./cardRepository.js";
 import { TYPE_COLORS,TYPE_SOFT,TYPES,VARIANTS } from "./constants.js";
 import { COLLECTIONS } from "./data/collections.js";
 import { userRepository } from "./userRepository.js";
-
-const INVENTORY_ID = "inventory";
-
-let state = {
-  activeId: COLLECTIONS[0].id,
-  cache: {},           // collectionId -> array of cards, or undefined if not loaded yet
-  search: "",
-  activeType: "ALL",
-  activeStatus: "ALL",
-  onlyFullArt: false,   // filtro exclusivo del Inventario
-  saveError: false,
-
-  user: null
-};
+import { state, INVENTORY_ID, DECKCHECK_ID } from "./state.js";
+import {
+  escapeHtml,
+  getMeta,
+  isComposite,
+  leafCollections,
+  splitCollectionName,
+  buildProgressHtml,
+  cardTotal,
+  applicableVariants
+} from "./cardUtils.js";
+import { openCardImage } from "./imageModal.js";
+import {
+  loadCollectionData,
+  syncCollection,
+  syncAllCollections,
+  allCollectionsLoaded,
+  loadAllCollections,
+  computeStats,
+  filteredCards
+} from "./collectionsService.js";
+import { checkDeckAgainstInventory } from "./deckChecker.js";
 
 // Guards against handling the same session twice (e.g. an explicit getSession()
 // check racing with the SIGNED_IN/INITIAL_SESSION event for the same session).
@@ -81,200 +89,9 @@ auth.getSession().then(handleSession);
 
 const root = document.getElementById("root");
 
-// ---- Modal de imagen de carta ----
-// El modal vive fuera de #root (se crea una sola vez y no se destruye en
-// cada render), para no perder su estado ni tener que re-engancharle
-// listeners cada vez que se redibuja la app.
-function buildImageUrl(series, set, cardId){
-  return `https://assets.tcgdex.net/es/${series}/${set}/${cardId}/high.webp`;
-}
-
-let imageModalEl = null;
-
-function ensureImageModal(){
-  if(imageModalEl) return imageModalEl;
-  const modal = document.createElement("div");
-  modal.id = "cardImageModal";
-  modal.className = "image-modal hidden";
-  modal.innerHTML = `
-    <div class="image-modal-backdrop"></div>
-    <div class="image-modal-content">
-      <button class="image-modal-close" type="button" aria-label="Cerrar">×</button>
-      <img id="cardImageModalImg" alt="Carta" />
-    </div>`;
-  document.body.appendChild(modal);
-
-  modal.querySelector(".image-modal-backdrop").addEventListener("click", closeCardImage);
-  modal.querySelector(".image-modal-close").addEventListener("click", closeCardImage);
-  document.addEventListener("keydown", (e) => {
-    if(e.key === "Escape") closeCardImage();
-  });
-
-  imageModalEl = modal;
-  return modal;
-}
-
-function openCardImage(series, set, cardId){
-  const modal = ensureImageModal();
-  const img = modal.querySelector("#cardImageModalImg");
-  img.src = buildImageUrl(series, set, cardId);
-  modal.classList.remove("hidden");
-}
-
-function closeCardImage(){
-  if(!imageModalEl) return;
-  imageModalEl.classList.add("hidden");
-  const img = imageModalEl.querySelector("#cardImageModalImg");
-  img.src = "";
-}
-
-function escapeHtml(str){
-  const d = document.createElement("div");
-  d.textContent = str;
-  return d.innerHTML;
-}
-
-function getMeta(id){
-  return COLLECTIONS.find(c => c.id === id) || COLLECTIONS[0];
-}
-
-// Una colección "compuesta" (p.ej. Black Star Promos) no tiene seed propio:
-// agrupa varias subcolecciones (MEP, SVP...) que sí lo tienen.
-function isComposite(meta){
-  return !!(meta && meta.subcollections);
-}
-
-// Lista plana de todas las unidades cargables/almacenables: las colecciones
-// normales tal cual, y las subcolecciones de las compuestas. Se usa para
-// cargar datos, comprobar si todo está cargado, y para agrupar el Inventario.
-function leafCollections(){
-  return COLLECTIONS.flatMap(c => isComposite(c) ? c.subcollections : [c]);
-}
-
-function findLeafMeta(id){
-  return leafCollections().find(c => c.id === id) || null;
-}
-
-function toVariantCard(raw){
-  // Migrates old {cantidad} shape or fills in a fresh {variantes} shape
-  if(raw.variantes){
-    return raw;
-  }
-  return {
-    id: raw.id,
-    nombre: raw.nombre,
-    tipo: raw.tipo,
-    numero: raw.numero,
-    set: raw.set,
-    variantes: {
-      normal: raw.cantidad || 0,
-      reverse: 0,
-      holo: 0,
-      fullart: 0
-    }
-  };
-}
-
-function cardTotal(card){
-  return VARIANTS.reduce((s,v) => s + (card.variantes[v.key] || 0), 0);
-}
-
-// Las cartas del Set de Juego (id <= gameSetMax) solo pueden ser Normal/Reverse/Holo.
-// Las cartas exclusivas del Set Maestro (más allá del Set de Juego) son siempre FullArt.
-// Si por algún motivo hay stock cargado en una variante "no esperada", se sigue mostrando
-// para no ocultar datos reales.
-function applicableVariants(card, gameSetMax){
-  // gameSetMax === null: colección sin distinción Play Set / Master Set
-  // (p.ej. Black Star Promos), se muestran siempre las 4 variantes.
-  if(gameSetMax === null){
-    return VARIANTS;
-  }
-  const isBaseSet = parseInt(card.id, 10) <= gameSetMax;
-  return VARIANTS.filter(v => {
-    const expected = isBaseSet ? v.key !== "fullart" : v.key === "fullart";
-    const hasStock = (card.variantes[v.key] || 0) > 0;
-    return expected || hasStock;
-  });
-}
-
-async function loadCollectionData(id) {
-  const meta = findLeafMeta(id);
-  if(!meta) return;
-  // Cartas base de la colección (nombre, tipo, número, etc.)
-  const seedCards = meta.seed.map(toVariantCard);
-  try {
-    // Stock almacenado en Supabase
-    const rows = await storage.getCollection(id);
-    // Índice por card_id para acceder rápidamente
-    const stock = new Map(
-      rows.map(row => [row.card_id, row])
-    );
-    // Mezclar datos estáticos con el stock
-    const cards = seedCards.map(card => {
-      const row = stock.get(card.id);
-      if (!row) return card;
-      return {
-        ...card,
-        variantes: {
-          normal: row.normal,
-          reverse: row.reverse,
-          holo: row.holo,
-          fullart: row.fullart
-        }
-      };
-    });
-    state.cache[id] = cards;
-  } catch (error) {
-    console.error(error);
-    // Si falla Supabase, cargar al menos la colección vacía
-    state.cache[id] = seedCards;
-  }
-}
-
 async function loadCollection(id) {
   await loadCollectionData(id);
   render();
-}
-
-// Precarga en Supabase, a valor 0, las cartas de una colección (o
-// subcolección) que aún no tengan fila propia. No toca las que ya existen,
-// así que es seguro pulsar el botón varias veces sin perder stock ya
-// guardado. Devuelve cuántas filas nuevas se han creado.
-async function initializeCollection(id){
-  const meta = findLeafMeta(id);
-  if(!meta) return {created: 0, total: 0};
-  const rows = await storage.getCollection(id);
-  const existing = new Set(rows.map(row => row.card_id));
-  const seedCards = meta.seed.map(toVariantCard);
-  const missing = seedCards.filter(c => !existing.has(c.id));
-  await Promise.all(missing.map(c => storage.saveCard(id, c)));
-  return {created: missing.length, total: seedCards.length};
-}
-
-// Sincroniza una colección concreta: si es una colección normal, inicializa
-// esa; si es compuesta (Black Star Promos), inicializa todas sus
-// subcolecciones. Devuelve cuántas filas nuevas se han creado en Supabase.
-async function syncCollection(id){
-  const meta = COLLECTIONS.find(c => c.id === id);
-  const leafIds = meta && isComposite(meta) ? meta.subcollections.map(s => s.id) : [id];
-
-  const results = await Promise.all(leafIds.map(lid => initializeCollection(lid)));
-  leafIds.forEach(lid => { state.cache[lid] = undefined; });
-  await Promise.all(leafIds.map(lid => loadCollectionData(lid)));
-
-  return results.reduce((s, r) => s + r.created, 0);
-}
-
-// Sincroniza absolutamente todas las colecciones (todas las hojas: normales
-// + subcolecciones de las compuestas).
-async function syncAllCollections(){
-  const leafIds = leafCollections().map(c => c.id);
-
-  const results = await Promise.all(leafIds.map(lid => initializeCollection(lid)));
-  leafIds.forEach(lid => { state.cache[lid] = undefined; });
-  await Promise.all(leafIds.map(lid => loadCollectionData(lid)));
-
-  return results.reduce((s, r) => s + r.created, 0);
 }
 
 // Handler compartido por los botones "Sync" / "Sync All" del panel de
@@ -303,20 +120,11 @@ async function handleSyncClick(btn, syncFn){
   render();
 }
 
-function allCollectionsLoaded(){
-  return leafCollections().every(c => state.cache[c.id] !== undefined);
-}
-
-async function loadAllCollections(){
-  const missing = leafCollections().filter(c => state.cache[c.id] === undefined);
-  await Promise.all(missing.map(c => loadCollectionData(c.id)));
-  render();
-}
-
 function selectCollection(id){
   if(id === state.activeId) return;
-  // Los viewers no pueden navegar a colecciones individuales, solo al Inventario.
-  if(id !== INVENTORY_ID && state.user?.role !== "admin") return;
+  // Los viewers no pueden navegar a colecciones individuales, solo al
+  // Inventario y al Comprobador de Mazos (ambos son de solo lectura).
+  if(id !== INVENTORY_ID && id !== DECKCHECK_ID && state.user?.role !== "admin") return;
 
   state.activeId = id;
   state.search = "";
@@ -324,10 +132,12 @@ function selectCollection(id){
   state.activeStatus = "ALL";
   state.onlyFullArt = false;
 
-  if(id === INVENTORY_ID){
+  // El Comprobador de Mazos necesita el stock de todas las colecciones para
+  // poder sumar reimpresiones, igual que el Inventario.
+  if(id === INVENTORY_ID || id === DECKCHECK_ID){
     if(!allCollectionsLoaded()){
       render();
-      loadAllCollections();
+      loadAllCollections().then(render);
     } else {
       render();
     }
@@ -364,46 +174,6 @@ async function changeVariant(collectionId, id, variantKey, delta){
   render();
 }
 
-function filteredCards(){
-  let list = state.cache[state.activeId] || [];
-  if(state.activeStatus === "PENDING"){
-    list = list.filter(c => cardTotal(c) === 0);
-  }
-  if(state.activeType !== "ALL"){
-    list = list.filter(c => c.tipo === state.activeType);
-  }
-  if(state.search.trim()){
-    const q = state.search.trim().toLowerCase();
-    list = list.filter(c =>
-      c.nombre.toLowerCase().includes(q) ||
-      c.numero.toLowerCase().includes(q)
-    );
-  }
-  return list;
-}
-
-function computeStats(maxId){
-  const cards = state.cache[state.activeId] || [];
-  const subset = maxId
-    ? cards.filter(c => parseInt(c.id, 10) <= maxId)
-    : cards;
-  const total = subset.length;
-  const owned = subset.filter(c => cardTotal(c) > 0).length;
-  const copies = subset.reduce((s,c) => s + cardTotal(c), 0);
-  const pct = total ? Math.round((owned/total)*100) : 0;
-  return {total, owned, copies, pct};
-}
-
-function buildProgressHtml(pct){
-  return `<div class="progress-seg" style="width:${pct}%; background:var(--electric-blue);"></div>`;
-}
-
-function splitCollectionName(name){
-  const m = name.match(/^(.*)\s\[([^\]]+)\]$/);
-  if(m) return {title: m[1], abbr: `[${m[2]}]`};
-  return {title: name, abbr: ""};
-}
-
 function buildSidebarHtml(){
   const isAdmin = state.user?.role === "admin";
 
@@ -415,11 +185,21 @@ function buildSidebarHtml(){
       </span>
     </div>`;
 
-  // Los viewers solo ven el Inventario: sin listado de colecciones ni botones de edición.
+  const deckCheckItem = `
+    <div class="sidebar-item sidebar-item-inventory ${state.activeId === DECKCHECK_ID ? "active" : ""}" data-collection="${DECKCHECK_ID}">
+      <span class="sidebar-dot" style="--item-color:var(--estadio)"></span>
+      <span class="sidebar-name">
+        <span class="sidebar-name-title">Comprobador de Mazos</span>
+      </span>
+    </div>`;
+
+  // Los viewers solo ven el Inventario y el Comprobador de Mazos: sin
+  // listado de colecciones ni botones de edición.
   if(!isAdmin){
     return `
     <div class="sidebar">
       ${inventoryItem}
+      ${deckCheckItem}
     </div>`;
   }
 
@@ -437,6 +217,7 @@ function buildSidebarHtml(){
   return `
     <div class="sidebar">
       ${inventoryItem}
+      ${deckCheckItem}
       <div class="sidebar-title">Colecciones</div>
       ${items}
       <div class="sidebar-hint">Cuando tengas la lista de otra colección, pásamela y la añado aquí.</div>
@@ -518,6 +299,11 @@ function render(){
 
   if(state.activeId === INVENTORY_ID){
     renderInventory(sidebarHtml);
+    return;
+  }
+
+  if(state.activeId === DECKCHECK_ID){
+    renderDeckChecker(sidebarHtml);
     return;
   }
 
@@ -764,6 +550,143 @@ function renderInventory(sidebarHtml){
   attachEvents();
 }
 
+const STATUS_ICON = { exact: "✅", reprint: "🔄", partial: "⚠️", missing: "❌", unknown: "❓" };
+const STATUS_LABEL = {
+  exact: "Tienes la edición pedida",
+  reprint: "Tienes suficientes, en otra edición",
+  partial: "Incompleta",
+  missing: "Sin stock",
+  unknown: "No reconocida"
+};
+
+function buildSourcesListHtml(label, sources){
+  const itemsHtml = sources.map(s => `<li>${escapeHtml(s.name)} (${s.owned})</li>`).join("");
+  return `
+    <div class="deck-row-sources">
+      <span class="deck-row-sources-label">${label}</span>
+      <ul>${itemsHtml}</ul>
+    </div>`;
+}
+
+function buildDeckCheckResultHtml(result){
+  if(!result) return "";
+
+  const counts = result.results.reduce((acc, r) => {
+    acc[r.status] = (acc[r.status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const summaryHtml = `
+    <div class="deck-summary">
+      <span class="deck-summary-item exact">✅ ${counts.exact || 0}</span>
+      <span class="deck-summary-item reprint">🔄 ${counts.reprint || 0}</span>
+      <span class="deck-summary-item partial">⚠️ ${counts.partial || 0}</span>
+      <span class="deck-summary-item missing">❌ ${counts.missing || 0}</span>
+      <span class="deck-summary-item unknown">❓ ${counts.unknown || 0}</span>
+    </div>`;
+
+  // Lo que requiere tu atención primero (falta algo, o hay que ir a buscarla
+  // a otra colección), luego lo incompleto/sin stock, y lo ya resuelto al
+  // final para no tener que desplazarse entre ello.
+  const order = { reprint: 0, partial: 1, missing: 2, unknown: 3, exact: 4 };
+  const sorted = [...result.results].sort((a, b) => order[a.status] - order[b.status]);
+
+  // El desglose "dónde las tienes" solo aporta algo cuando la respuesta no
+  // es obvia: si es la edición exacta pedida (ya sabes dónde está: en la
+  // colección que has consultado) o si no tienes ninguna copia, mostrarlo
+  // es ruido. Solo se pinta para 🔄 y ⚠️.
+  const rowsHtml = sorted.length ? sorted.map(r => {
+    let noteHtml = "";
+    let sourcesHtml = "";
+    if(r.status === "unknown"){
+      noteHtml = `<span class="deck-row-note">No está en tus colecciones ni en la base de reimpresiones.</span>`;
+    } else if(r.status === "reprint"){
+      sourcesHtml = buildSourcesListHtml("Cógelas de:", r.sources);
+    } else if(r.status === "partial"){
+      noteHtml = `<span class="deck-row-note">Faltan ${r.missing}.</span>`;
+      if(r.sources.length){
+        sourcesHtml = buildSourcesListHtml("Tienes en:", r.sources);
+      }
+    }
+    return `
+    <div class="deck-row deck-row-${r.status}">
+      <span class="deck-row-status" title="${STATUS_LABEL[r.status]}">${STATUS_ICON[r.status]}</span>
+      <span class="deck-row-name">${escapeHtml(r.displayName)}</span>
+      <span class="deck-row-count">${r.totalOwned} / ${r.needed}</span>
+      ${noteHtml}
+      ${sourcesHtml}
+    </div>`;
+  }).join("") : `
+    <div class="empty-state">
+      <div class="glyph">🃏</div>
+      <p>No se ha reconocido ninguna carta en el texto pegado.</p>
+    </div>`;
+
+  const energyNoteHtml = result.skippedEnergy > 0
+    ? `<p class="deck-note">${result.skippedEnergy === 1 ? "Se ha omitido 1 línea" : `Se han omitido ${result.skippedEnergy} líneas`} de energía básica (se asume que siempre tienes suficientes).</p>`
+    : "";
+
+  const warningsHtml = result.warnings.length ? `
+    <div class="deck-warnings">
+      <p>No he podido interpretar estas líneas, revísalas a mano:</p>
+      <ul>${result.warnings.map(w => `<li>${escapeHtml(w)}</li>`).join("")}</ul>
+    </div>` : "";
+
+  return `
+    <div class="deck-results">
+      ${summaryHtml}
+      <div class="deck-rows">${rowsHtml}</div>
+      ${energyNoteHtml}
+      ${warningsHtml}
+    </div>`;
+}
+
+function renderDeckChecker(sidebarHtml){
+  if(!allCollectionsLoaded()){
+    root.innerHTML = `
+    <div class="shell">
+      ${sidebarHtml}
+      <div class="main"><div class="loading">Cargando inventario…</div></div>
+    </div>`;
+    attachEvents();
+    return;
+  }
+
+  const userInfoHtml = buildUserPanelHtml();
+  const resultHtml = buildDeckCheckResultHtml(state.deckCheckResult);
+
+  root.innerHTML = `
+  <div class="shell">
+    ${sidebarHtml}
+    <div class="main">
+    <div class="wrap">
+
+      ${userInfoHtml}
+
+      <div class="header">
+        <div class="title-block">
+          <div class="eyebrow">Antes de imprimir la lista</div>
+          <h1>Comprobador de <span style="color:var(--estadio)">Mazos</span></h1>
+        </div>
+      </div>
+
+      <p class="deck-intro">Pega aquí la lista exportada desde Pokémon TCG Live o Limitless (formato «cantidad nombre SET número») y te digo si tienes stock suficiente, contando también reimpresiones equivalentes de otras colecciones.</p>
+
+      <textarea id="deckListInput" class="deck-textarea" rows="12" placeholder="4 Ultra Ball SVI 196&#10;2 Charizard ex OBF 125&#10;8 Basic {R} Energy SVE 2&#10;...">${escapeHtml(state.deckListText)}</textarea>
+
+      <div class="toolbar">
+        <button id="checkDeckBtn" class="sync-btn deck-check-btn">Comprobar mazo</button>
+      </div>
+
+      ${resultHtml}
+
+    </div>
+    </div>
+  </div>`;
+
+  attachEvents();
+}
+
 // Editor de stock para una colección compuesta (p.ej. Black Star Promos):
 // como es una agrupación de varias tandas de promos y no un set real, no
 // tiene sentido un % de Play Set / Master Set, así que solo se muestran
@@ -974,6 +897,30 @@ function attachEvents(){
     });
   });
 
+  const checkDeckBtn = document.getElementById("checkDeckBtn");
+  if(checkDeckBtn){
+    checkDeckBtn.addEventListener("click", async () => {
+      const textarea = document.getElementById("deckListInput");
+      state.deckListText = textarea ? textarea.value : state.deckListText;
+
+      checkDeckBtn.disabled = true;
+      checkDeckBtn.textContent = "Comprobando…";
+      try {
+        if(!allCollectionsLoaded()){
+          await loadAllCollections();
+        }
+        state.deckCheckResult = await checkDeckAgainstInventory(state.deckListText, state.cache);
+      } catch (error) {
+        console.error(error);
+        alert("Hubo un error al comprobar el mazo. Revisa la consola.");
+      } finally {
+        checkDeckBtn.disabled = false;
+        checkDeckBtn.textContent = "Comprobar mazo";
+      }
+      render();
+    });
+  }
+
   document.querySelectorAll("[data-action]").forEach(btn => {
     btn.addEventListener("click", () => {
       const collectionId = btn.dataset.collection;
@@ -991,6 +938,7 @@ async function startApp() {
     if(!allCollectionsLoaded()){
       render();
       await loadAllCollections();
+      render();
     } else {
       render();
     }
@@ -1000,5 +948,3 @@ async function startApp() {
 }
 
 window.auth = auth;
-
-
