@@ -174,12 +174,37 @@ async function changeVariant(collectionId, id, variantKey, delta){
   render();
 }
 
+// Iconos de bola para el sidebar: Honorball (blanca con banda roja) para
+// Inventario/Comprobador de Mazos, ya que son las únicas entradas visibles
+// también para usuarios no admin; Poké Ball (roja) para las colecciones.
+function honorballIconSvg(){
+  return `
+    <svg width="15" height="15" viewBox="0 0 32 32" aria-hidden="true" class="sidebar-ball">
+      <circle cx="16" cy="16" r="14.5" fill="#f1ede4" stroke="#f1ede4" stroke-width="1.5"/>
+      <rect x="1.5" y="14.5" width="29" height="3" fill="#ef4444"/>
+      <circle cx="16" cy="16" r="5" fill="#ef4444"/>
+      <circle cx="16" cy="16" r="2.4" fill="#f1ede4"/>
+    </svg>`;
+}
+
+function pokeballIconSvg(){
+  return `
+    <svg width="15" height="15" viewBox="0 0 32 32" aria-hidden="true" class="sidebar-ball">
+      <circle cx="16" cy="16" r="14.5" fill="#ef4444" stroke="#12141c" stroke-width="1.5"/>
+      <path d="M1.5 16 A14.5 14.5 0 0 1 30.5 16 Z" fill="#ef4444"/>
+      <path d="M1.5 16 A14.5 14.5 0 0 0 30.5 16 Z" fill="#f1ede4"/>
+      <rect x="1.5" y="14.5" width="29" height="3" fill="#12141c"/>
+      <circle cx="16" cy="16" r="5" fill="#12141c"/>
+      <circle cx="16" cy="16" r="3" fill="#f1ede4"/>
+    </svg>`;
+}
+
 function buildSidebarHtml(){
   const isAdmin = state.user?.role === "admin";
 
   const inventoryItem = `
     <div class="sidebar-item sidebar-item-inventory ${state.activeId === INVENTORY_ID ? "active" : ""}" data-collection="${INVENTORY_ID}">
-      <span class="sidebar-dot" style="--item-color:var(--electric-blue)"></span>
+      ${honorballIconSvg()}
       <span class="sidebar-name">
         <span class="sidebar-name-title">Inventario</span>
       </span>
@@ -187,7 +212,7 @@ function buildSidebarHtml(){
 
   const deckCheckItem = `
     <div class="sidebar-item sidebar-item-inventory ${state.activeId === DECKCHECK_ID ? "active" : ""}" data-collection="${DECKCHECK_ID}">
-      <span class="sidebar-dot" style="--item-color:var(--estadio)"></span>
+      ${honorballIconSvg()}
       <span class="sidebar-name">
         <span class="sidebar-name-title">Comprobador de Mazos</span>
       </span>
@@ -198,6 +223,7 @@ function buildSidebarHtml(){
   if(!isAdmin){
     return `
     <div class="sidebar">
+      <div class="sidebar-title">Herramientas</div>
       ${inventoryItem}
       ${deckCheckItem}
     </div>`;
@@ -207,7 +233,7 @@ function buildSidebarHtml(){
     const {title, abbr} = splitCollectionName(c.name);
     return `
     <div class="sidebar-item ${c.id === state.activeId ? "active" : ""}" data-collection="${c.id}">
-      <span class="sidebar-dot" style="--item-color:${c.accent}"></span>
+      ${pokeballIconSvg()}
       <span class="sidebar-name">
         <span class="sidebar-name-title">${escapeHtml(title)}</span>
         ${abbr ? `<span class="sidebar-name-abbr">${escapeHtml(abbr)}</span>` : ""}
@@ -216,6 +242,7 @@ function buildSidebarHtml(){
   }).join("");
   return `
     <div class="sidebar">
+      <div class="sidebar-title">Herramientas</div>
       ${inventoryItem}
       ${deckCheckItem}
       <div class="sidebar-title">Colecciones</div>
@@ -560,12 +587,19 @@ const STATUS_LABEL = {
 };
 
 function buildSourcesListHtml(label, sources){
-  const itemsHtml = sources.map(s => `<li>${escapeHtml(s.name)} (${s.owned})</li>`).join("");
+  // sources puede ser el desglose por colección ({name, owned}) o por
+  // código de carta ({code, owned}) — buildCodeItemHtml decide cuál usar.
+  const itemsHtml = sources.map(buildCodeItemHtml).join("");
   return `
     <div class="deck-row-sources">
       <span class="deck-row-sources-label">${label}</span>
       <ul>${itemsHtml}</ul>
     </div>`;
+}
+
+function buildCodeItemHtml(s){
+  if(s.code) return `<li>${escapeHtml(s.code)} (${s.owned})</li>`;
+  return `<li>${escapeHtml(s.name)} (${s.owned})</li>`;
 }
 
 function buildDeckCheckResultHtml(result){
@@ -601,7 +635,9 @@ function buildDeckCheckResultHtml(result){
     if(r.status === "unknown"){
       noteHtml = `<span class="deck-row-note">No está en tus colecciones ni en la base de reimpresiones.</span>`;
     } else if(r.status === "reprint"){
-      sourcesHtml = buildSourcesListHtml("Cógelas de:", r.sources);
+      // Reemplazable: lo que importa es a qué código ir a buscarlas, no en
+      // qué colección interna viven ni cuántas hay en cada una.
+      sourcesHtml = buildSourcesListHtml("Cógelas de:", r.codeSources);
     } else if(r.status === "partial"){
       noteHtml = `<span class="deck-row-note">Faltan ${r.missing}.</span>`;
       if(r.sources.length){
@@ -611,8 +647,8 @@ function buildDeckCheckResultHtml(result){
     return `
     <div class="deck-row deck-row-${r.status}">
       <span class="deck-row-status" title="${STATUS_LABEL[r.status]}">${STATUS_ICON[r.status]}</span>
-      <span class="deck-row-name">${escapeHtml(r.displayName)}</span>
-      <span class="deck-row-count">${r.totalOwned} / ${r.needed}</span>
+      <span class="deck-row-name">${escapeHtml(r.displayName)} <span class="deck-row-code">[${escapeHtml(r.requestedCode)}]</span></span>
+      <span class="deck-row-count">${r.displayOwned} / ${r.needed}</span>
       ${noteHtml}
       ${sourcesHtml}
     </div>`;

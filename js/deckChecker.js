@@ -74,6 +74,23 @@ function buildSources(owners, collectionNames){
     .sort((a, b) => b.owned - a.owned);
 }
 
+// Igual que buildSources, pero identificando cada procedencia por su código
+// de carta ("TWM 170") en vez de por el nombre de la colección: para decir
+// "cógelas de" lo útil es el código a buscar en el inventario, no en qué
+// colección interna vive.
+function buildCodeSources(owners){
+  const byCode = new Map();
+  for(const o of owners){
+    const owned = cardTotal(o.card);
+    if(owned <= 0) continue;
+    const code = `${o.card.set} ${o.card.id}`;
+    byCode.set(code, (byCode.get(code) || 0) + owned);
+  }
+  return [...byCode.entries()]
+    .map(([code, owned]) => ({ code, owned }))
+    .sort((a, b) => a.code.localeCompare(b.code));
+}
+
 // Resuelve una línea de la lista contra el inventario local. Devuelve
 // cuántas copias tienes en total (sumando reimpresiones/nombre según el
 // tipo de carta), cuántas de esas son de la edición EXACTA pedida en la
@@ -167,14 +184,20 @@ export async function checkDeckAgainstInventory(rawText, cache){
     const key = identityKey(entry, resolved);
 
     if(!grouped.has(key)){
+      // Código tal como se pidió en la primera línea que originó este grupo
+      // ("ASC 170"), para mostrarlo junto al nombre y que se sepa qué
+      // edición concreta pedía la lista, aunque luego se resuelva con otra.
+      const requestedCode = `${entry.setCode} ${String(entry.number).padStart(3, "0")}`;
       grouped.set(key, {
         displayName: resolved.recognizedName || entry.name,
+        requestedCode,
         needed: 0,
         exactOwned: 0,
         totalOwned: resolved.totalOwned,
         recognized: resolved.recognized,
         recognizedName: resolved.recognizedName,
         sources: buildSources(resolved.owners, collectionNames),
+        codeSources: buildCodeSources(resolved.owners),
         lines: []
       });
     }
@@ -199,7 +222,10 @@ export async function checkDeckAgainstInventory(rawText, cache){
     else if(g.totalOwned >= g.needed) status = "reprint";
     else if(g.totalOwned > 0) status = "partial";
     else status = "missing";
-    return { ...g, missing, status };
+    // Lo que se muestra como "tienes" nunca debe superar lo que hacía
+    // falta: si pides 1 y tienes 3, se enseña 1/1, no 3/1.
+    const displayOwned = Math.min(g.totalOwned, g.needed);
+    return { ...g, missing, status, displayOwned };
   });
 
   return { results, warnings, skippedEnergy };
