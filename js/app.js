@@ -265,11 +265,60 @@ function buildSidebarHtml(){
     </div>`;
 }
 
-// ---- Barra de navegación móvil (Inventario / Colecciones / Herramientas) ----
+// Construye el contenido del panel "Filtro" de la barra móvil. Los filtros
+// disponibles cambian según la vista activa: en el Inventario son Tipo +
+// Solo FullArt (no hay estado "Pendientes" porque el Inventario ya solo
+// enseña cartas que tienes); en una colección concreta (o Black Star
+// Promos) son Estado + Tipo, igual que en el toolbar de escritorio. Los
+// chips usan los mismos atributos data-status/data-type que los del toolbar
+// normal, así que un único listener delegado (ver attachEvents) sirve para
+// ambos sitios sin duplicar lógica; solo el buscador necesita su propio id
+// ("searchInputMobile") y su propio listener, porque se referencia por id.
+function buildMobileFilterSheetHtml(){
+  const isInventory = state.activeId === INVENTORY_ID;
+
+  const typeChipsHtml = ["ALL", ...TYPES].map(t => {
+    const label = t === "ALL" ? "Todos los tipos" : t;
+    const active = state.activeType === t;
+    const color = t === "ALL" ? "var(--ink)" : TYPE_COLORS[t];
+    return `<div class="chip ${active ? "active" : ""}" data-type="${t}"
+      style="${active ? `background:${color};` : ""}">${escapeHtml(label)}</div>`;
+  }).join("");
+
+  const extraRowHtml = isInventory
+    ? `<div class="chip ${state.onlyFullArt ? "active" : ""}" id="fullArtToggleMobile"
+        style="${state.onlyFullArt ? `background:var(--v-fullart);` : ""}">Solo FullArt</div>`
+    : ["ALL", "PENDING"].map(s => {
+        const label = s === "ALL" ? "Todas" : "Pendientes";
+        const active = state.activeStatus === s;
+        const color = s === "ALL" ? "var(--ink)" : "var(--pending)";
+        return `<div class="chip ${active ? "active" : ""}" data-status="${s}"
+          style="${active ? `background:${color};` : ""}">${escapeHtml(label)}</div>`;
+      }).join("");
+
+  // En Inventario el orden visual habitual es Tipo → FullArt; en una
+  // colección es Estado → Tipo (igual que en sus respectivos toolbars).
+  const chipsHtml = isInventory
+    ? `<div class="chips">${typeChipsHtml}</div><div class="chips">${extraRowHtml}</div>`
+    : `<div class="chips">${extraRowHtml}</div><div class="chips">${typeChipsHtml}</div>`;
+
+  return `
+    <div class="mobile-sheet">
+      <div class="mobile-sheet-title">Filtros · ${isInventory ? "Inventario" : "Colección"}</div>
+      <div class="toolbar">
+        <div class="search-box">
+          <input type="text" id="searchInputMobile" placeholder="Buscar por nombre o número…" value="${escapeHtml(state.search)}">
+        </div>
+      </div>
+      ${chipsHtml}
+    </div>`;
+}
+
+// ---- Barra de navegación móvil (Inventario / Colecciones / Herramientas / Filtro) ----
 // Sustituye, solo en pantallas estrechas, al sidebar de escritorio (que en
 // móvil quedaba como una tira horizontal con scroll incómoda). "Inventario"
-// navega directo; "Colecciones" (solo admin) y "Herramientas" despliegan un
-// panel tipo hoja que se desliza justo encima de la barra.
+// navega directo; "Colecciones" (solo admin), "Herramientas" y "Filtro"
+// despliegan un panel tipo hoja que se desliza justo encima de la barra.
 function buildMobileNavHtml(){
   const isAdmin = state.user?.role === "admin";
   const open = state.mobileMenuOpen;
@@ -281,6 +330,10 @@ function buildMobileNavHtml(){
   // cuanto se elegía un elemento y se cerraba la hoja desplegable.
   const isCollectionView = state.activeId !== INVENTORY_ID && state.activeId !== DECKCHECK_ID;
   const isToolsView = state.activeId === DECKCHECK_ID;
+  // El Comprobador de Mazos no tiene búsqueda ni chips que filtrar, así que
+  // el botón "Filtro" no tiene sentido en esa vista: se oculta en vez de
+  // abrir un panel vacío.
+  const hasFilters = state.activeId !== DECKCHECK_ID;
 
   let panelHtml = "";
   if(open === "colecciones" && isAdmin){
@@ -317,6 +370,8 @@ function buildMobileNavHtml(){
           </span>
         </div>
       </div>`;
+  } else if(open === "filtro" && hasFilters){
+    panelHtml = buildMobileFilterSheetHtml();
   }
 
   const backdropHtml = open ? `<div class="mobile-sheet-backdrop" data-mobile-close="1"></div>` : "";
@@ -326,19 +381,24 @@ function buildMobileNavHtml(){
     <div class="mobile-bottom-area">
       ${panelHtml}
       <nav class="mobile-nav">
-        <button type="button" class="mobile-nav-btn ${state.activeId === INVENTORY_ID ? "active" : ""}" data-mobile-nav="${INVENTORY_ID}">
+        <button type="button" class="mobile-nav-btn ${(state.activeId === INVENTORY_ID && !open) ? "active" : ""}" data-mobile-nav="${INVENTORY_ID}">
           <i class="ti ti-clipboard-list" aria-hidden="true"></i>
           <span>Inventario</span>
         </button>
         ${isAdmin ? `
-        <button type="button" class="mobile-nav-btn ${(open === "colecciones" || isCollectionView) ? "active" : ""}" data-mobile-toggle="colecciones">
+        <button type="button" class="mobile-nav-btn ${(open === "colecciones" || (isCollectionView && !open)) ? "active" : ""}" data-mobile-toggle="colecciones">
           <i class="ti ti-stack-2" aria-hidden="true"></i>
           <span>Colecciones</span>
         </button>` : ""}
-        <button type="button" class="mobile-nav-btn ${(open === "herramientas" || isToolsView) ? "active" : ""}" data-mobile-toggle="herramientas">
+        <button type="button" class="mobile-nav-btn ${(open === "herramientas" || (isToolsView && !open)) ? "active" : ""}" data-mobile-toggle="herramientas">
           <i class="ti ti-tools" aria-hidden="true"></i>
           <span>Herramientas</span>
         </button>
+        ${hasFilters ? `
+        <button type="button" class="mobile-nav-btn ${open === "filtro" ? "active" : ""}" data-mobile-toggle="filtro">
+          <i class="ti ti-filter" aria-hidden="true"></i>
+          <span>Filtro</span>
+        </button>` : ""}
       </nav>
     </div>`;
 }
@@ -1018,6 +1078,17 @@ function attachEvents(){
     });
   }
 
+  // Versión del toggle FullArt que vive dentro del panel "Filtro" de la
+  // barra móvil (id distinto porque el toolbar de escritorio ya usa
+  // "fullArtToggle" y no puede haber dos elementos con el mismo id).
+  const fullArtToggleMobile = document.getElementById("fullArtToggleMobile");
+  if(fullArtToggleMobile){
+    fullArtToggleMobile.addEventListener("click", () => {
+      state.onlyFullArt = !state.onlyFullArt;
+      render();
+    });
+  }
+
   const searchInput = document.getElementById("searchInput");
   if(searchInput){
     searchInput.addEventListener("input", (e) => {
@@ -1025,6 +1096,21 @@ function attachEvents(){
       const pos = e.target.selectionStart;
       render();
       const el = document.getElementById("searchInput");
+      if(el){ el.focus(); el.setSelectionRange(pos, pos); }
+    });
+  }
+
+  // Versión del buscador que vive dentro del panel "Filtro" de la barra
+  // móvil: mismo state.search, pero su propio id/listener/restauración de
+  // cursor, ya que se referencia por id y no puede compartirlo con el
+  // buscador del toolbar de escritorio.
+  const searchInputMobile = document.getElementById("searchInputMobile");
+  if(searchInputMobile){
+    searchInputMobile.addEventListener("input", (e) => {
+      state.search = e.target.value;
+      const pos = e.target.selectionStart;
+      render();
+      const el = document.getElementById("searchInputMobile");
       if(el){ el.focus(); el.setSelectionRange(pos, pos); }
     });
   }
