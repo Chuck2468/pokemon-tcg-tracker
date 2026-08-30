@@ -164,6 +164,20 @@ function selectCollection(id){
   }
 }
 
+// Navegación desde la barra móvil inferior: a diferencia de selectCollection
+// (que no hace nada si ya estás en esa colección), aquí SIEMPRE hay que
+// cerrar el panel desplegado y volver a pintar, aunque el destino sea la
+// vista en la que ya estás (p.ej. tocar "Inventario" solo para cerrar el
+// panel de Colecciones que tenías abierto).
+function mobileNavigate(id){
+  state.mobileMenuOpen = null;
+  if(id === state.activeId){
+    render();
+  } else {
+    selectCollection(id);
+  }
+}
+
 async function changeVariant(collectionId, id, variantKey, delta){
   const cards = state.cache[collectionId];
   if(!cards) return;
@@ -251,6 +265,76 @@ function buildSidebarHtml(){
     </div>`;
 }
 
+// ---- Barra de navegación móvil (Inventario / Colecciones / Herramientas) ----
+// Sustituye, solo en pantallas estrechas, al sidebar de escritorio (que en
+// móvil quedaba como una tira horizontal con scroll incómoda). "Inventario"
+// navega directo; "Colecciones" (solo admin) y "Herramientas" despliegan un
+// panel tipo hoja que se desliza justo encima de la barra.
+function buildMobileNavHtml(){
+  const isAdmin = state.user?.role === "admin";
+  const open = state.mobileMenuOpen;
+
+  let panelHtml = "";
+  if(open === "colecciones" && isAdmin){
+    const items = COLLECTIONS.map(c => {
+      const {title, abbr} = splitCollectionName(c.name);
+      return `
+      <div class="mobile-sheet-item ${c.id === state.activeId ? "active" : ""}" data-collection="${c.id}">
+        ${pokeballIconSvg()}
+        <span class="sidebar-name">
+          <span class="sidebar-name-title">${escapeHtml(title)}</span>
+          ${abbr ? `<span class="sidebar-name-abbr">${escapeHtml(abbr)}</span>` : ""}
+        </span>
+      </div>`;
+    }).join("");
+    panelHtml = `
+      <div class="mobile-sheet">
+        <div class="mobile-sheet-title">Colecciones</div>
+        ${items}
+      </div>`;
+  } else if(open === "herramientas"){
+    panelHtml = `
+      <div class="mobile-sheet">
+        <div class="mobile-sheet-title">Herramientas</div>
+        <div class="mobile-sheet-item ${state.activeId === DECKCHECK_ID ? "active" : ""}" data-collection="${DECKCHECK_ID}">
+          ${honorballIconSvg()}
+          <span class="sidebar-name">
+            <span class="sidebar-name-title">Comprobador de Mazos</span>
+          </span>
+        </div>
+        <div class="mobile-sheet-item disabled">
+          <i class="ti ti-plus" aria-hidden="true"></i>
+          <span class="sidebar-name">
+            <span class="sidebar-name-title">Próximas herramientas aquí</span>
+          </span>
+        </div>
+      </div>`;
+  }
+
+  const backdropHtml = open ? `<div class="mobile-sheet-backdrop" data-mobile-close="1"></div>` : "";
+
+  return `
+    ${backdropHtml}
+    <div class="mobile-bottom-area">
+      ${panelHtml}
+      <nav class="mobile-nav">
+        <button type="button" class="mobile-nav-btn ${state.activeId === INVENTORY_ID ? "active" : ""}" data-mobile-nav="${INVENTORY_ID}">
+          <i class="ti ti-clipboard-list" aria-hidden="true"></i>
+          <span>Inventario</span>
+        </button>
+        ${isAdmin ? `
+        <button type="button" class="mobile-nav-btn ${open === "colecciones" ? "active" : ""}" data-mobile-toggle="colecciones">
+          <i class="ti ti-stack-2" aria-hidden="true"></i>
+          <span>Colecciones</span>
+        </button>` : ""}
+        <button type="button" class="mobile-nav-btn ${open === "herramientas" ? "active" : ""}" data-mobile-toggle="herramientas">
+          <i class="ti ti-tools" aria-hidden="true"></i>
+          <span>Herramientas</span>
+        </button>
+      </nav>
+    </div>`;
+}
+
 function renderLogin() {
   root.innerHTML = `
     <div class="shell">
@@ -322,7 +406,7 @@ function buildUserPanelHtml(collectionId){
 }
 
 function render(){
-  const sidebarHtml = buildSidebarHtml();
+  const sidebarHtml = buildSidebarHtml() + buildMobileNavHtml();
 
   if(state.activeId === INVENTORY_ID){
     renderInventory(sidebarHtml);
@@ -866,6 +950,33 @@ function attachEvents(){
   document.querySelectorAll(".sidebar-item").forEach(item => {
     item.addEventListener("click", () => {
       selectCollection(item.dataset.collection);
+    });
+  });
+
+  // Barra móvil inferior: "Inventario" navega directo; "Colecciones" y
+  // "Herramientas" abren/cierran su panel (si tocas el que ya está abierto,
+  // se cierra); los items dentro del panel navegan y lo cierran.
+  document.querySelectorAll("[data-mobile-nav]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      mobileNavigate(btn.dataset.mobileNav);
+    });
+  });
+  document.querySelectorAll("[data-mobile-toggle]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const key = btn.dataset.mobileToggle;
+      state.mobileMenuOpen = state.mobileMenuOpen === key ? null : key;
+      render();
+    });
+  });
+  document.querySelectorAll(".mobile-sheet-item[data-collection]").forEach(item => {
+    item.addEventListener("click", () => {
+      mobileNavigate(item.dataset.collection);
+    });
+  });
+  document.querySelectorAll("[data-mobile-close]").forEach(el => {
+    el.addEventListener("click", () => {
+      state.mobileMenuOpen = null;
+      render();
     });
   });
 

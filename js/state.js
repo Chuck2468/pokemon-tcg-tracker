@@ -18,5 +18,7 @@ export const state = {
   deckListText: "",     // texto pegado en el Comprobador de Mazos
   deckCheckResult: null, // resultado de la última comprobación (o null)
 
+  mobileMenuOpen: null,  // "colecciones" | "herramientas" | null — panel abierto en la barra móvil inferior
+
   user: null
 };
