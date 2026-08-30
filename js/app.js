@@ -274,6 +274,14 @@ function buildMobileNavHtml(){
   const isAdmin = state.user?.role === "admin";
   const open = state.mobileMenuOpen;
 
+  // El marco de "activo" no debe depender solo de si el panel desplegable
+  // está abierto: también hay que mostrarlo cuando ya estás navegando
+  // dentro de esa sección (una colección concreta, o el Comprobador de
+  // Mazos) aunque el panel esté cerrado. Sin esto, el marco desaparecía en
+  // cuanto se elegía un elemento y se cerraba la hoja desplegable.
+  const isCollectionView = state.activeId !== INVENTORY_ID && state.activeId !== DECKCHECK_ID;
+  const isToolsView = state.activeId === DECKCHECK_ID;
+
   let panelHtml = "";
   if(open === "colecciones" && isAdmin){
     const items = COLLECTIONS.map(c => {
@@ -323,11 +331,11 @@ function buildMobileNavHtml(){
           <span>Inventario</span>
         </button>
         ${isAdmin ? `
-        <button type="button" class="mobile-nav-btn ${open === "colecciones" ? "active" : ""}" data-mobile-toggle="colecciones">
+        <button type="button" class="mobile-nav-btn ${(open === "colecciones" || isCollectionView) ? "active" : ""}" data-mobile-toggle="colecciones">
           <i class="ti ti-stack-2" aria-hidden="true"></i>
           <span>Colecciones</span>
         </button>` : ""}
-        <button type="button" class="mobile-nav-btn ${open === "herramientas" ? "active" : ""}" data-mobile-toggle="herramientas">
+        <button type="button" class="mobile-nav-btn ${(open === "herramientas" || isToolsView) ? "active" : ""}" data-mobile-toggle="herramientas">
           <i class="ti ti-tools" aria-hidden="true"></i>
           <span>Herramientas</span>
         </button>
