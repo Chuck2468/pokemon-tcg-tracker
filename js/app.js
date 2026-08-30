@@ -265,15 +265,17 @@ function buildSidebarHtml(){
     </div>`;
 }
 
-// Construye el contenido del panel "Filtro" de la barra móvil. Los filtros
-// disponibles cambian según la vista activa: en el Inventario son Tipo +
-// Solo FullArt (no hay estado "Pendientes" porque el Inventario ya solo
-// enseña cartas que tienes); en una colección concreta (o Black Star
-// Promos) son Estado + Tipo, igual que en el toolbar de escritorio. Los
-// chips usan los mismos atributos data-status/data-type que los del toolbar
-// normal, así que un único listener delegado (ver attachEvents) sirve para
-// ambos sitios sin duplicar lógica; solo el buscador necesita su propio id
-// ("searchInputMobile") y su propio listener, porque se referencia por id.
+// Construye el contenido del panel "Filtro" de la barra móvil. Solo enseña
+// los chips (Tipo/Estado/FullArt): el buscador se queda únicamente en el
+// toolbar de arriba de cada vista, así no se duplica el mismo control en
+// dos sitios distintos de la pantalla. Los filtros disponibles cambian
+// según la vista activa: en el Inventario son Tipo + Solo FullArt (no hay
+// estado "Pendientes" porque el Inventario ya solo enseña cartas que
+// tienes); en una colección concreta (o Black Star Promos) son Estado +
+// Tipo, igual que en el toolbar de escritorio. Los chips usan los mismos
+// atributos data-status/data-type que los del toolbar normal, así que un
+// único listener delegado (ver attachEvents) sirve para ambos sitios sin
+// duplicar lógica.
 function buildMobileFilterSheetHtml(){
   const isInventory = state.activeId === INVENTORY_ID;
 
@@ -285,32 +287,43 @@ function buildMobileFilterSheetHtml(){
       style="${active ? `background:${color};` : ""}">${escapeHtml(label)}</div>`;
   }).join("");
 
-  const extraRowHtml = isInventory
-    ? `<div class="chip ${state.onlyFullArt ? "active" : ""}" id="fullArtToggleMobile"
-        style="${state.onlyFullArt ? `background:var(--v-fullart);` : ""}">Solo FullArt</div>`
-    : ["ALL", "PENDING"].map(s => {
-        const label = s === "ALL" ? "Todas" : "Pendientes";
-        const active = state.activeStatus === s;
-        const color = s === "ALL" ? "var(--ink)" : "var(--pending)";
-        return `<div class="chip ${active ? "active" : ""}" data-status="${s}"
-          style="${active ? `background:${color};` : ""}">${escapeHtml(label)}</div>`;
-      }).join("");
+  const typeGroupHtml = `
+    <div class="filter-group">
+      <div class="filter-group-label">Tipo</div>
+      <div class="chips">${typeChipsHtml}</div>
+    </div>`;
 
-  // En Inventario el orden visual habitual es Tipo → FullArt; en una
-  // colección es Estado → Tipo (igual que en sus respectivos toolbars).
-  const chipsHtml = isInventory
-    ? `<div class="chips">${typeChipsHtml}</div><div class="chips">${extraRowHtml}</div>`
-    : `<div class="chips">${extraRowHtml}</div><div class="chips">${typeChipsHtml}</div>`;
+  const extraGroupHtml = isInventory
+    ? `
+    <div class="filter-group">
+      <div class="filter-group-label">Variante</div>
+      <div class="chips">
+        <div class="chip ${state.onlyFullArt ? "active" : ""}" id="fullArtToggleMobile"
+          style="${state.onlyFullArt ? `background:var(--v-fullart);` : ""}">Solo FullArt</div>
+      </div>
+    </div>`
+    : `
+    <div class="filter-group">
+      <div class="filter-group-label">Estado</div>
+      <div class="chips">
+        ${["ALL", "PENDING"].map(s => {
+          const label = s === "ALL" ? "Todas" : "Pendientes";
+          const active = state.activeStatus === s;
+          const color = s === "ALL" ? "var(--ink)" : "var(--pending)";
+          return `<div class="chip ${active ? "active" : ""}" data-status="${s}"
+            style="${active ? `background:${color};` : ""}">${escapeHtml(label)}</div>`;
+        }).join("")}
+      </div>
+    </div>`;
+
+  // En Inventario el orden habitual es Tipo → FullArt; en una colección es
+  // Estado → Tipo (igual que en sus respectivos toolbars).
+  const groupsHtml = isInventory ? `${typeGroupHtml}${extraGroupHtml}` : `${extraGroupHtml}${typeGroupHtml}`;
 
   return `
-    <div class="mobile-sheet">
+    <div class="mobile-sheet mobile-sheet-filters">
       <div class="mobile-sheet-title">Filtros · ${isInventory ? "Inventario" : "Colección"}</div>
-      <div class="toolbar">
-        <div class="search-box">
-          <input type="text" id="searchInputMobile" placeholder="Buscar por nombre o número…" value="${escapeHtml(state.search)}">
-        </div>
-      </div>
-      ${chipsHtml}
+      ${groupsHtml}
     </div>`;
 }
 
@@ -1096,21 +1109,6 @@ function attachEvents(){
       const pos = e.target.selectionStart;
       render();
       const el = document.getElementById("searchInput");
-      if(el){ el.focus(); el.setSelectionRange(pos, pos); }
-    });
-  }
-
-  // Versión del buscador que vive dentro del panel "Filtro" de la barra
-  // móvil: mismo state.search, pero su propio id/listener/restauración de
-  // cursor, ya que se referencia por id y no puede compartirlo con el
-  // buscador del toolbar de escritorio.
-  const searchInputMobile = document.getElementById("searchInputMobile");
-  if(searchInputMobile){
-    searchInputMobile.addEventListener("input", (e) => {
-      state.search = e.target.value;
-      const pos = e.target.selectionStart;
-      render();
-      const el = document.getElementById("searchInputMobile");
       if(el){ el.focus(); el.setSelectionRange(pos, pos); }
     });
   }
