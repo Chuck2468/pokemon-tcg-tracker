@@ -30,8 +30,76 @@
     --electric-blue:#6fd3ff;
     --pending:#f97316;
 
+    --bg-tint-1:#6d5dfc14;
+    --bg-tint-2:#35b7a814;
+
+    /* Colores propios del "menú" (sidebar de escritorio + barra inferior
+       móvil + sus paneles de Colecciones/Herramientas). Por defecto son
+       iguales a los colores normales del panel, así que el tema oscuro no
+       cambia; el tema claro los sobreescribe más abajo con el rojo Poké
+       Ball. Mantenerlos separados de --bg-panel/--ink evita tener que
+       repetir "solo en el menú" con selectores extra por todo el CSS. */
+    --sidebar-bg:var(--bg-panel);
+    --sidebar-bg-raised:var(--bg-panel-raised);
+    --sidebar-line:var(--line);
+    --sidebar-ink:var(--ink-dim);
+    --sidebar-ink-strong:var(--ink);
+    --sidebar-muted:var(--muted);
+    --sidebar-active-ring:var(--poke);
+
     --radius:14px;
     font-family:'Inter',system-ui,sans-serif;
+  }
+
+  /* ---- Tema claro (estilo Pokémon: blancos limpios + rojo/azul/dorado
+     saturados, en vez de los pasteles del tema oscuro que se verían
+     lavados sobre fondo blanco). Se activa poniendo data-theme="light" en
+     <html> — ver theme.js. Todo el resto del CSS usa var(--...), así que
+     no hace falta tocar nada más para que el tema claro se aplique en toda
+     la app. */
+  :root[data-theme="light"]{
+    --bg-deep:#f3f5fb;
+    --bg-panel:#ffffff;
+    --bg-panel-raised:#eef1f9;
+    --bg-row:#f7f9fd;
+    --ink:#1b1f2d;
+    --ink-dim:#565f78;
+    --muted:#848da3;
+    --line:#dde2ee;
+
+    --poke:#5b4fe0;
+    --poke-soft:#5b4fe01f;
+    --objeto:#0891b2;
+    --objeto-soft:#0891b21f;
+    --herramienta:#9333ea;
+    --herramienta-soft:#9333ea1f;
+    --estadio:#16a34a;
+    --estadio-soft:#16a34a1f;
+    --partidario:#dc2626;
+    --partidario-soft:#dc26261f;
+    --energia:#ca8a04;
+    --energia-soft:#ca8a041f;
+
+    --v-normal:#848da3;
+    --v-reverse:#848da3;
+    --v-holo:#848da3;
+    --v-fullart:#848da3;
+    --electric-blue:#0f7fd6;
+    --pending:#ea580c;
+
+    --bg-tint-1:#5b4fe012;
+    --bg-tint-2:#0891b212;
+
+    /* El "menú" (sidebar/barra inferior) usa su propia paleta roja tipo
+       Poké Ball en vez de blanco liso, para que la app se sienta más
+       temática Pokémon en vez de un blanco genérico. */
+    --sidebar-bg:#e3350d;
+    --sidebar-bg-raised:#c72a08;
+    --sidebar-line:#f2694f;
+    --sidebar-ink:#ffd7cc;
+    --sidebar-ink-strong:#ffffff;
+    --sidebar-muted:#ffbaa8;
+    --sidebar-active-ring:#ffffff;
   }
 
   *{box-sizing:border-box;}
@@ -61,8 +129,8 @@
   .sidebar{
     width:238px;
     flex-shrink:0;
-    background:var(--bg-panel);
-    border-right:1px solid var(--line);
+    background:var(--sidebar-bg);
+    border-right:1px solid var(--sidebar-line);
     padding:22px 12px;
     display:flex;
     flex-direction:column;
@@ -73,7 +141,7 @@
     font-size:10px;
     letter-spacing:.12em;
     text-transform:uppercase;
-    color:var(--muted);
+    color:var(--sidebar-muted);
     padding:0 8px 10px;
   }
   .sidebar-item{
@@ -84,19 +152,19 @@
     border-radius:9px;
     cursor:pointer;
     border:1px solid transparent;
-    color:var(--ink-dim);
+    color:var(--sidebar-ink);
     font-weight:600;
     font-size:13px;
     line-height:1.3;
     transition:all .12s ease;
   }
   .sidebar-item .sidebar-dot{margin-top:4px;}
-  .sidebar-item .sidebar-ball{margin-top:2px; flex-shrink:0;}
-  .sidebar-item:hover{background:var(--bg-panel-raised); color:var(--ink);}
+  .sidebar-item i{font-size:15px; width:15px; text-align:center; flex-shrink:0; margin-top:2px; color:inherit;}
+  .sidebar-item:hover{background:var(--sidebar-bg-raised); color:var(--sidebar-ink-strong);}
   .sidebar-item.active{
-    background:var(--bg-panel-raised);
-    border-color:var(--line);
-    color:var(--ink);
+    background:var(--sidebar-bg-raised);
+    border-color:var(--sidebar-line);
+    color:var(--sidebar-ink-strong);
   }
   .sidebar-item-inventory{
     margin-bottom:2px;
@@ -114,22 +182,77 @@
     font-family:'JetBrains Mono',monospace;
     font-size:10.5px;
     font-weight:700;
-    color:var(--muted);
+    color:var(--sidebar-muted);
     letter-spacing:.02em;
   }
-  .sidebar-item.active .sidebar-name-abbr{color:var(--ink-dim);}
+  .sidebar-item.active .sidebar-name-abbr{color:var(--sidebar-ink);}
   .sidebar-dot{
     width:9px; height:9px; border-radius:50%;
     background:var(--item-color, var(--poke));
     flex-shrink:0;
   }
   .sidebar-hint{
-    margin-top:auto;
     font-size:10.5px;
-    color:var(--muted);
+    color:var(--sidebar-muted);
     padding:14px 8px 0;
     line-height:1.5;
-    border-top:1px solid var(--line);
+    border-top:1px solid var(--sidebar-line);
+  }
+
+  /* Agrupa el aviso de "pásamela y la añado" (si lo hay) y el interruptor
+     de tema al fondo del sidebar. Antes ese margin-top:auto vivía en
+     .sidebar-hint directamente, pero el interruptor de tema debe quedar
+     pegado al fondo también en el caso (viewer) en que no hay hint. */
+  .sidebar-footer{
+    margin-top:auto;
+  }
+
+  /* ---- Interruptor de tema claro/oscuro ----
+     Aparece como una fila más al fondo del sidebar (escritorio) y como un
+     elemento del panel "Herramientas" en móvil — mismas clases en los dos
+     sitios, sin necesidad de duplicar CSS. Usa las variables --sidebar-*
+     porque en los dos sitios donde vive el fondo ya es el rojo del menú. */
+  .theme-toggle{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    width:100%;
+    padding:10px 10px;
+    margin-top:4px;
+    border-radius:9px;
+    border:1px solid transparent;
+    background:transparent;
+    color:var(--sidebar-ink);
+    font:inherit;
+    font-weight:600;
+    font-size:12.5px;
+    cursor:pointer;
+    text-align:left;
+    transition:all .12s ease;
+  }
+  .theme-toggle:hover{background:var(--sidebar-bg-raised); color:var(--sidebar-ink-strong);}
+  .theme-toggle i{font-size:15px; width:15px; text-align:center; flex-shrink:0;}
+  .theme-toggle-label{flex:1;}
+  .theme-toggle-switch{
+    position:relative;
+    width:34px; height:18px;
+    border-radius:999px;
+    background:var(--line);
+    flex-shrink:0;
+    transition:background .15s ease;
+  }
+  .theme-toggle-switch.is-light{background:var(--poke);}
+  .theme-toggle-knob{
+    position:absolute;
+    top:2px; left:2px;
+    width:14px; height:14px;
+    border-radius:50%;
+    background:var(--bg-deep);
+    transition:transform .15s ease;
+  }
+  .theme-toggle-switch.is-light .theme-toggle-knob{
+    transform:translateX(16px);
+    background:#fff;
   }
 
   .main{
@@ -137,8 +260,8 @@
     min-width:0;
     padding:28px 20px 60px;
     background-image:
-      radial-gradient(circle at 15% 0%, #6d5dfc14 0%, transparent 40%),
-      radial-gradient(circle at 90% 10%, #35b7a814 0%, transparent 35%);
+      radial-gradient(circle at 15% 0%, var(--bg-tint-1) 0%, transparent 40%),
+      radial-gradient(circle at 90% 10%, var(--bg-tint-2) 0%, transparent 35%);
   }
 
   @media (max-width:680px){
@@ -187,8 +310,8 @@
     .mobile-nav{
       display:flex;
       gap:8px;
-      background:var(--bg-panel);
-      border-top:1px solid var(--line);
+      background:var(--sidebar-bg);
+      border-top:1px solid var(--sidebar-line);
       padding:8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
     }
     .mobile-nav-btn{
@@ -201,14 +324,14 @@
       border-radius:10px;
       border:1px solid transparent;
       background:transparent;
-      color:var(--ink-dim);
+      color:var(--sidebar-ink);
       font:inherit;
       font-size:10.5px;
       font-weight:600;
     }
-    .mobile-nav-btn i{font-size:18px; color:var(--ink);}
-    .mobile-nav-btn.active{border-color:var(--poke); color:var(--ink);}
-    .mobile-nav-btn.active i{color:var(--ink);}
+    .mobile-nav-btn i{font-size:18px; color:var(--sidebar-ink-strong);}
+    .mobile-nav-btn.active{border-color:var(--sidebar-active-ring); color:var(--sidebar-ink-strong);}
+    .mobile-nav-btn.active i{color:var(--sidebar-ink-strong);}
 
     .mobile-sheet{
       background:var(--bg-panel);
@@ -235,8 +358,24 @@
     }
     .mobile-sheet-item.active{background:var(--bg-panel-raised); color:var(--ink);}
     .mobile-sheet-item.disabled{opacity:.5;}
-    .mobile-sheet-item .sidebar-ball, .mobile-sheet-item i{flex-shrink:0;}
+    .mobile-sheet-item i{flex-shrink:0;}
     .mobile-sheet-item i{font-size:15px; width:15px; text-align:center;}
+
+    /* Variante roja del panel, para "Colecciones" y "Herramientas" (la
+       versión móvil del sidebar): mismo .mobile-sheet de base, pero con
+       las variables del menú en vez de las del panel neutro. El panel
+       "Filtro" NO lleva esta clase, así que los chips de colores siguen
+       sobre superficie clara donde se leen mejor. */
+    .mobile-sheet-nav{
+      background:var(--sidebar-bg);
+      border-top-color:var(--sidebar-line);
+    }
+    .mobile-sheet-nav .mobile-sheet-title{color:var(--sidebar-muted);}
+    .mobile-sheet-nav .mobile-sheet-item{color:var(--sidebar-ink);}
+    .mobile-sheet-nav .mobile-sheet-item:hover{background:var(--sidebar-bg-raised); color:var(--sidebar-ink-strong);}
+    .mobile-sheet-nav .mobile-sheet-item.active{background:var(--sidebar-bg-raised); color:var(--sidebar-ink-strong);}
+    .mobile-sheet-nav .sidebar-name-abbr{color:var(--sidebar-muted);}
+    .mobile-sheet-nav .mobile-sheet-item.active .sidebar-name-abbr{color:var(--sidebar-ink);}
 
     /* Panel "Filtro": cada bloque de chips (Tipo/Estado/Variante) va bajo
        su propia etiqueta, en vez de amontonar todos los chips seguidos sin
@@ -388,6 +527,16 @@
     color:#12141c;
     border-color:transparent;
     font-weight:700;
+  }
+  /* El chip "Todas"/"Todos los tipos" es distinto al resto: su fondo activo
+     es var(--ink) (el color de texto del tema), no un color de tipo fijo.
+     var(--ink) cambia de claro (tema oscuro) a oscuro (tema claro), así que
+     el texto no puede ser el mismo oscuro fijo que usan los demás chips —
+     en el tema claro fondo y texto acabarían siendo los dos oscuros y las
+     letras desaparecerían. Aquí el texto usa var(--bg-panel) en su lugar,
+     que es precisamente el contraste correcto de --ink en cualquier tema. */
+  .chip.chip-neutral.active{
+    color:var(--bg-panel);
   }
   .chip:hover:not(.active){border-color:var(--muted);}
 
@@ -615,18 +764,19 @@
     margin: 80px auto;
     padding: 32px;
     border-radius: 12px;
-    background: #2b2b2b;
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
     text-align: center;
     box-shadow: 0 8px 24px rgba(0,0,0,.25);
 }
 
   .auth-card h2 {
-      color: white;
+      color: var(--ink);
       margin-bottom: 16px;
   }
 
   .auth-card p {
-      color: #d6d6d6;
+      color: var(--ink-dim);
       margin-bottom: 24px;
       line-height: 1.5;
   }
@@ -743,7 +893,11 @@
     cursor:default;
   }
 
-  /* ---- Botón "Continuar con Google" (pantalla de login) ---- */
+  /* ---- Botón "Continuar con Google" (pantalla de login) ----
+     Google exige usar sus colores oficiales de marca en este botón (no
+     variables de la app): existen una variante "oscura" (por defecto) y
+     una "clara", y cambiamos de una a otra según el tema, tal como indica
+     su guía de estilo para el botón de Sign In With Google. */
   .google-btn{
     display:inline-flex;
     align-items:center;
@@ -766,6 +920,18 @@
   }
   .google-btn:active{
     background:#141414;
+  }
+  :root[data-theme="light"] .google-btn{
+    border-color:#dadce0;
+    background:#fff;
+    color:#3c4043;
+  }
+  :root[data-theme="light"] .google-btn:hover{
+    background:#f8f9fa;
+    border-color:#dadce0;
+  }
+  :root[data-theme="light"] .google-btn:active{
+    background:#f1f3f4;
   }
   .google-icon{
     flex-shrink:0;
@@ -879,42 +1045,62 @@
     flex-direction:column;
     gap:6px;
   }
+  /* Icono a la izquierda (ancho fijo) + cuerpo a la derecha, en vez de un
+     único flex-wrap con todo suelto: así, si el nombre es largo y ocupa dos
+     líneas, la cantidad se queda anclada arriba a la derecha de esas dos
+     líneas en vez de "caer" a una línea suelta por su cuenta (que es lo que
+     pasaba antes en pantallas estrechas). */
   .deck-row{
     display:flex;
-    align-items:center;
-    flex-wrap:wrap;
+    align-items:flex-start;
     gap:10px;
     background:var(--bg-row);
     border:1px solid var(--line);
     border-radius:10px;
     padding:9px 14px;
   }
-  .deck-row-status{font-size:15px; flex-shrink:0;}
-  .deck-row-name{font-weight:600; font-size:13.5px;}
+  .deck-row-status{font-size:15px; flex-shrink:0; margin-top:1px;}
+  .deck-row-body{flex:1; min-width:0;}
+  .deck-row-header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .deck-row-name{
+    font-weight:600;
+    font-size:13.5px;
+    min-width:0;
+    overflow-wrap:break-word;
+  }
   .deck-row-code{
+    /* Su propia línea bajo el nombre, en vez de competir por hueco en la
+       misma línea: con nombres largos ya no se queda "colgando" a medias. */
+    display:block;
     color:var(--muted);
     font-weight:500;
     font-size:11.5px;
     font-family:'JetBrains Mono',monospace;
-    margin-left:8px;
+    margin-top:1px;
   }
   .deck-row-alt{color:var(--muted); font-weight:500; font-size:12px;}
   .deck-row-count{
+    flex-shrink:0;
     font-family:'JetBrains Mono',monospace;
     font-size:12.5px;
     color:var(--ink-dim);
-    margin-left:auto;
+    white-space:nowrap;
   }
   .deck-row-note{
-    width:100%;
     font-size:11.5px;
     color:var(--muted);
+    margin-top:4px;
   }
   .deck-row-sources{
-    width:100%;
     font-size:11.5px;
     color:var(--ink-dim);
     font-family:'JetBrains Mono',monospace;
+    margin-top:4px;
   }
   .deck-row-sources-label{display:block; margin-bottom:2px;}
   .deck-row-sources ul{

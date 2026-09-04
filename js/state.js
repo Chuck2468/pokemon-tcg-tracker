@@ -18,7 +18,9 @@ export const state = {
   deckListText: "",     // texto pegado en el Comprobador de Mazos
   deckCheckResult: null, // resultado de la última comprobación (o null)
 
-  mobileMenuOpen: null,  // "colecciones" | "herramientas" | null — panel abierto en la barra móvil inferior
+  mobileMenuOpen: null,  // "colecciones" | "herramientas" | "filtro" | null — panel abierto en la barra móvil inferior
+
+  theme: "dark",   // "dark" | "light" — el valor real se fija al arrancar (ver theme.js/app.js), esto es solo el default antes de aplicarlo
 
   user: null
 };

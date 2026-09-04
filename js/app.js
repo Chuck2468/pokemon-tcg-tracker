@@ -25,6 +25,19 @@ import {
   filteredCards
 } from "./collectionsService.js";
 import { checkDeckAgainstInventory } from "./deckChecker.js";
+import { getPreferredTheme, applyTheme } from "./theme.js";
+
+// Se aplica de inmediato, al cargar el módulo, antes de esperar a la sesión
+// de Supabase: así la pantalla de login ya sale con el tema correcto en vez
+// de arrancar siempre en oscuro y "saltar" al claro un instante después.
+state.theme = getPreferredTheme();
+applyTheme(state.theme);
+
+function toggleTheme(){
+  state.theme = state.theme === "light" ? "dark" : "light";
+  applyTheme(state.theme);
+  render();
+}
 
 // Guards against handling the same session twice (e.g. an explicit getSession()
 // check racing with the SIGNED_IN/INITIAL_SESSION event for the same session).
@@ -191,26 +204,18 @@ async function changeVariant(collectionId, id, variantKey, delta){
 // Iconos de bola para el sidebar: Honorball (blanca con banda roja) para
 // Inventario/Comprobador de Mazos, ya que son las únicas entradas visibles
 // también para usuarios no admin; Poké Ball (roja) para las colecciones.
-function honorballIconSvg(){
+// Fila de "Tema claro/oscuro", reutilizada tal cual tanto en el sidebar de
+// escritorio (dentro de .sidebar-footer) como en el panel "Herramientas" de
+// la barra móvil: mismas clases, mismo markup, así que un único listener
+// delegado por [data-theme-toggle] (ver attachEvents) sirve para ambas.
+function buildThemeToggleHtml(){
+  const isLight = state.theme === "light";
   return `
-    <svg width="15" height="15" viewBox="0 0 32 32" aria-hidden="true" class="sidebar-ball">
-      <circle cx="16" cy="16" r="14.5" fill="#f1ede4" stroke="#f1ede4" stroke-width="1.5"/>
-      <rect x="1.5" y="14.5" width="29" height="3" fill="#ef4444"/>
-      <circle cx="16" cy="16" r="5" fill="#ef4444"/>
-      <circle cx="16" cy="16" r="2.4" fill="#f1ede4"/>
-    </svg>`;
-}
-
-function pokeballIconSvg(){
-  return `
-    <svg width="15" height="15" viewBox="0 0 32 32" aria-hidden="true" class="sidebar-ball">
-      <circle cx="16" cy="16" r="14.5" fill="#ef4444" stroke="#12141c" stroke-width="1.5"/>
-      <path d="M1.5 16 A14.5 14.5 0 0 1 30.5 16 Z" fill="#ef4444"/>
-      <path d="M1.5 16 A14.5 14.5 0 0 0 30.5 16 Z" fill="#f1ede4"/>
-      <rect x="1.5" y="14.5" width="29" height="3" fill="#12141c"/>
-      <circle cx="16" cy="16" r="5" fill="#12141c"/>
-      <circle cx="16" cy="16" r="3" fill="#f1ede4"/>
-    </svg>`;
+    <button type="button" class="theme-toggle" data-theme-toggle>
+      <i class="ti ${isLight ? "ti-sun" : "ti-moon"}" aria-hidden="true"></i>
+      <span class="theme-toggle-label">Tema ${isLight ? "claro" : "oscuro"}</span>
+      <span class="theme-toggle-switch ${isLight ? "is-light" : ""}"><span class="theme-toggle-knob"></span></span>
+    </button>`;
 }
 
 function buildSidebarHtml(){
@@ -218,7 +223,7 @@ function buildSidebarHtml(){
 
   const inventoryItem = `
     <div class="sidebar-item sidebar-item-inventory ${state.activeId === INVENTORY_ID ? "active" : ""}" data-collection="${INVENTORY_ID}">
-      ${honorballIconSvg()}
+      <i class="ti ti-clipboard-list" aria-hidden="true"></i>
       <span class="sidebar-name">
         <span class="sidebar-name-title">Inventario</span>
       </span>
@@ -226,7 +231,7 @@ function buildSidebarHtml(){
 
   const deckCheckItem = `
     <div class="sidebar-item sidebar-item-inventory ${state.activeId === DECKCHECK_ID ? "active" : ""}" data-collection="${DECKCHECK_ID}">
-      ${honorballIconSvg()}
+      <i class="ti ti-clipboard-check" aria-hidden="true"></i>
       <span class="sidebar-name">
         <span class="sidebar-name-title">Comprobador de Mazos</span>
       </span>
@@ -240,6 +245,9 @@ function buildSidebarHtml(){
       <div class="sidebar-title">Herramientas</div>
       ${inventoryItem}
       ${deckCheckItem}
+      <div class="sidebar-footer">
+        ${buildThemeToggleHtml()}
+      </div>
     </div>`;
   }
 
@@ -247,7 +255,7 @@ function buildSidebarHtml(){
     const {title, abbr} = splitCollectionName(c.name);
     return `
     <div class="sidebar-item ${c.id === state.activeId ? "active" : ""}" data-collection="${c.id}">
-      ${pokeballIconSvg()}
+      <i class="ti ti-cards" aria-hidden="true"></i>
       <span class="sidebar-name">
         <span class="sidebar-name-title">${escapeHtml(title)}</span>
         ${abbr ? `<span class="sidebar-name-abbr">${escapeHtml(abbr)}</span>` : ""}
@@ -261,7 +269,10 @@ function buildSidebarHtml(){
       ${deckCheckItem}
       <div class="sidebar-title">Colecciones</div>
       ${items}
-      <div class="sidebar-hint">Cuando tengas la lista de otra colección, pásamela y la añado aquí.</div>
+      <div class="sidebar-footer">
+        <div class="sidebar-hint">Cuando tengas la lista de otra colección, pásamela y la añado aquí.</div>
+        ${buildThemeToggleHtml()}
+      </div>
     </div>`;
 }
 
@@ -283,7 +294,7 @@ function buildMobileFilterSheetHtml(){
     const label = t === "ALL" ? "Todos los tipos" : t;
     const active = state.activeType === t;
     const color = t === "ALL" ? "var(--ink)" : TYPE_COLORS[t];
-    return `<div class="chip ${active ? "active" : ""}" data-type="${t}"
+    return `<div class="chip ${active ? "active" : ""} ${t === "ALL" ? "chip-neutral" : ""}" data-type="${t}"
       style="${active ? `background:${color};` : ""}">${escapeHtml(label)}</div>`;
   }).join("");
 
@@ -310,7 +321,7 @@ function buildMobileFilterSheetHtml(){
           const label = s === "ALL" ? "Todas" : "Pendientes";
           const active = state.activeStatus === s;
           const color = s === "ALL" ? "var(--ink)" : "var(--pending)";
-          return `<div class="chip ${active ? "active" : ""}" data-status="${s}"
+          return `<div class="chip ${active ? "active" : ""} ${s === "ALL" ? "chip-neutral" : ""}" data-status="${s}"
             style="${active ? `background:${color};` : ""}">${escapeHtml(label)}</div>`;
         }).join("")}
       </div>
@@ -354,7 +365,7 @@ function buildMobileNavHtml(){
       const {title, abbr} = splitCollectionName(c.name);
       return `
       <div class="mobile-sheet-item ${c.id === state.activeId ? "active" : ""}" data-collection="${c.id}">
-        ${pokeballIconSvg()}
+        <i class="ti ti-cards" aria-hidden="true"></i>
         <span class="sidebar-name">
           <span class="sidebar-name-title">${escapeHtml(title)}</span>
           ${abbr ? `<span class="sidebar-name-abbr">${escapeHtml(abbr)}</span>` : ""}
@@ -362,16 +373,16 @@ function buildMobileNavHtml(){
       </div>`;
     }).join("");
     panelHtml = `
-      <div class="mobile-sheet">
+      <div class="mobile-sheet mobile-sheet-nav">
         <div class="mobile-sheet-title">Colecciones</div>
         ${items}
       </div>`;
   } else if(open === "herramientas"){
     panelHtml = `
-      <div class="mobile-sheet">
+      <div class="mobile-sheet mobile-sheet-nav">
         <div class="mobile-sheet-title">Herramientas</div>
         <div class="mobile-sheet-item ${state.activeId === DECKCHECK_ID ? "active" : ""}" data-collection="${DECKCHECK_ID}">
-          ${honorballIconSvg()}
+          <i class="ti ti-clipboard-check" aria-hidden="true"></i>
           <span class="sidebar-name">
             <span class="sidebar-name-title">Comprobador de Mazos</span>
           </span>
@@ -382,6 +393,7 @@ function buildMobileNavHtml(){
             <span class="sidebar-name-title">Próximas herramientas aquí</span>
           </span>
         </div>
+        ${buildThemeToggleHtml()}
       </div>`;
   } else if(open === "filtro" && hasFilters){
     panelHtml = buildMobileFilterSheetHtml();
@@ -529,7 +541,7 @@ function render(){
     const label = s === "ALL" ? "Todas" : "Pendientes";
     const active = state.activeStatus === s;
     const color = s === "ALL" ? "var(--ink)" : "var(--pending)";
-    return `<div class="chip ${active ? "active" : ""}" data-status="${s}"
+    return `<div class="chip ${active ? "active" : ""} ${s === "ALL" ? "chip-neutral" : ""}" data-status="${s}"
       style="${active ? `background:${color};` : ""}">${escapeHtml(label)}</div>`;
   }).join("");
 
@@ -537,7 +549,7 @@ function render(){
     const label = t === "ALL" ? "Todos los tipos" : t;
     const active = state.activeType === t;
     const color = t === "ALL" ? "var(--ink)" : TYPE_COLORS[t];
-    return `<div class="chip ${active ? "active" : ""}" data-type="${t}"
+    return `<div class="chip ${active ? "active" : ""} ${t === "ALL" ? "chip-neutral" : ""}" data-type="${t}"
       style="${active ? `background:${color};` : ""}">${escapeHtml(label)}</div>`;
   }).join("");
 
@@ -636,7 +648,7 @@ function renderInventory(sidebarHtml){
     const label = t === "ALL" ? "Todos los tipos" : t;
     const active = state.activeType === t;
     const color = t === "ALL" ? "var(--ink)" : TYPE_COLORS[t];
-    return `<div class="chip ${active ? "active" : ""}" data-type="${t}"
+    return `<div class="chip ${active ? "active" : ""} ${t === "ALL" ? "chip-neutral" : ""}" data-type="${t}"
       style="${active ? `background:${color};` : ""}">${escapeHtml(label)}</div>`;
   }).join("");
 
@@ -812,10 +824,14 @@ function buildDeckCheckResultHtml(result){
     return `
     <div class="deck-row deck-row-${r.status}">
       <span class="deck-row-status" title="${STATUS_LABEL[r.status]}">${STATUS_ICON[r.status]}</span>
-      <span class="deck-row-name">${escapeHtml(r.displayName)} <span class="deck-row-code">[${escapeHtml(r.requestedCode)}]</span></span>
-      <span class="deck-row-count">${r.displayOwned} / ${r.needed}</span>
-      ${noteHtml}
-      ${sourcesHtml}
+      <div class="deck-row-body">
+        <div class="deck-row-header">
+          <span class="deck-row-name">${escapeHtml(r.displayName)}<span class="deck-row-code">[${escapeHtml(r.requestedCode)}]</span></span>
+          <span class="deck-row-count">${r.displayOwned} / ${r.needed}</span>
+        </div>
+        ${noteHtml}
+        ${sourcesHtml}
+      </div>
     </div>`;
   }).join("") : `
     <div class="empty-state">
@@ -914,7 +930,7 @@ function renderBsp(sidebarHtml, meta){
     const label = s === "ALL" ? "Todas" : "Pendientes";
     const active = state.activeStatus === s;
     const color = s === "ALL" ? "var(--ink)" : "var(--pending)";
-    return `<div class="chip ${active ? "active" : ""}" data-status="${s}"
+    return `<div class="chip ${active ? "active" : ""} ${s === "ALL" ? "chip-neutral" : ""}" data-status="${s}"
       style="${active ? `background:${color};` : ""}">${escapeHtml(label)}</div>`;
   }).join("");
 
@@ -922,7 +938,7 @@ function renderBsp(sidebarHtml, meta){
     const label = t === "ALL" ? "Todos los tipos" : t;
     const active = state.activeType === t;
     const color = t === "ALL" ? "var(--ink)" : TYPE_COLORS[t];
-    return `<div class="chip ${active ? "active" : ""}" data-type="${t}"
+    return `<div class="chip ${active ? "active" : ""} ${t === "ALL" ? "chip-neutral" : ""}" data-type="${t}"
       style="${active ? `background:${color};` : ""}">${escapeHtml(label)}</div>`;
   }).join("");
 
@@ -1059,6 +1075,13 @@ function attachEvents(){
       state.mobileMenuOpen = null;
       render();
     });
+  });
+
+  // Interruptor de tema: aparece tanto en el sidebar de escritorio como en
+  // el panel "Herramientas" móvil, con el mismo markup en los dos sitios,
+  // así que un único querySelectorAll cubre ambos.
+  document.querySelectorAll("[data-theme-toggle]").forEach(btn => {
+    btn.addEventListener("click", toggleTheme);
   });
 
   const syncBtn = document.getElementById("syncBtn");
