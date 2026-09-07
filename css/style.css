@@ -436,6 +436,68 @@
     .mobile-sheet-nav .sidebar-name-abbr{color:var(--sidebar-muted);}
     .mobile-sheet-nav .mobile-sheet-item.active .sidebar-name-abbr{color:var(--sidebar-ink);}
 
+    /* Tema claro, panel "Colecciones" (el único mobile-sheet-nav con hero):
+       la cabecera con el Pikachu se queda roja, pero el scroll con la lista
+       pasa a fondo blanco y texto oscuro normal (en vez de la paleta clara
+       pensada para fondo rojo), para que se lea mejor. El panel
+       "Herramientas" no lleva mobile-sheet-has-hero, así que no le afecta
+       y sigue en rojo. */
+    :root[data-theme="light"] .mobile-sheet-has-hero .mobile-sheet-hero{
+      background:var(--sidebar-bg);
+    }
+    :root[data-theme="light"] .mobile-sheet-has-hero .mobile-sheet-scroll{
+      background:var(--bg-panel);
+      border-top:1px solid var(--line);
+    }
+    :root[data-theme="light"] .mobile-sheet-has-hero .mobile-sheet-scroll .mobile-sheet-title{
+      color:var(--muted);
+    }
+    :root[data-theme="light"] .mobile-sheet-has-hero .mobile-sheet-scroll .mobile-sheet-item{
+      color:var(--ink-dim);
+    }
+    :root[data-theme="light"] .mobile-sheet-has-hero .mobile-sheet-scroll .mobile-sheet-item:hover{
+      background:var(--bg-panel-raised);
+      color:var(--ink);
+    }
+    :root[data-theme="light"] .mobile-sheet-has-hero .mobile-sheet-scroll .mobile-sheet-item.active{
+      background:var(--bg-panel-raised);
+      color:var(--ink);
+    }
+    :root[data-theme="light"] .mobile-sheet-has-hero .mobile-sheet-scroll .sidebar-name-abbr{
+      color:var(--muted);
+    }
+    :root[data-theme="light"] .mobile-sheet-has-hero .mobile-sheet-scroll .mobile-sheet-item.active .sidebar-name-abbr{
+      color:var(--ink-dim);
+    }
+
+    /* Tema claro, panel "Herramientas" (mobile-sheet-nav SIN hero, no tiene
+       cabecera que mantener roja): todo el panel pasa a fondo blanco y
+       texto oscuro normal, igual que se hizo con el scroll de Colecciones. */
+    :root[data-theme="light"] .mobile-sheet-nav:not(.mobile-sheet-has-hero){
+      background:var(--bg-panel);
+      border-top-color:var(--line);
+    }
+    :root[data-theme="light"] .mobile-sheet-nav:not(.mobile-sheet-has-hero) .mobile-sheet-title{
+      color:var(--muted);
+    }
+    :root[data-theme="light"] .mobile-sheet-nav:not(.mobile-sheet-has-hero) .mobile-sheet-item{
+      color:var(--ink-dim);
+    }
+    :root[data-theme="light"] .mobile-sheet-nav:not(.mobile-sheet-has-hero) .mobile-sheet-item:hover{
+      background:var(--bg-panel-raised);
+      color:var(--ink);
+    }
+    :root[data-theme="light"] .mobile-sheet-nav:not(.mobile-sheet-has-hero) .mobile-sheet-item.active{
+      background:var(--bg-panel-raised);
+      color:var(--ink);
+    }
+    :root[data-theme="light"] .mobile-sheet-nav:not(.mobile-sheet-has-hero) .sidebar-name-abbr{
+      color:var(--muted);
+    }
+    :root[data-theme="light"] .mobile-sheet-nav:not(.mobile-sheet-has-hero) .mobile-sheet-item.active .sidebar-name-abbr{
+      color:var(--ink-dim);
+    }
+
     /* Panel "Filtro": cada bloque de chips (Tipo/Estado/Variante) va bajo
        su propia etiqueta, en vez de amontonar todos los chips seguidos sin
        distinción de a qué filtro pertenece cada uno. */
