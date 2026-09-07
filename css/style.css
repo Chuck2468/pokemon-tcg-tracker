@@ -341,6 +341,65 @@
       max-height:60vh;
       overflow-y:auto;
     }
+    /* Cuando el panel lleva cabecera "hero" (Colecciones, con Pikachu
+       asomando), .mobile-sheet deja de ser el propio contenedor con scroll:
+       pasa a ser solo un marco de altura máxima, y el scroll se mueve a
+       .mobile-sheet-scroll. Así la cabecera queda fuera del recorte y el
+       Pikachu puede sobresalir por encima sin que el overflow se lo coma. */
+    .mobile-sheet-has-hero{
+      display:flex;
+      flex-direction:column;
+      padding:0;
+      overflow:visible;
+    }
+    .mobile-sheet-hero{
+      position:relative;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:16px 54px 14px 16px;
+      flex-shrink:0;
+    }
+    .mobile-sheet-hero-title{
+      font-family:'JetBrains Mono',monospace;
+      font-size:16.5px;
+      font-weight:700;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      color:var(--sidebar-ink-strong);
+    }
+    .mobile-sheet-close{
+      position:absolute;
+      top:14px; right:14px;
+      width:28px; height:28px;
+      border-radius:50%;
+      border:none;
+      background:var(--sidebar-ink-strong);
+      color:var(--sidebar-bg);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:15px;
+      cursor:pointer;
+      z-index:1;
+    }
+    .mobile-sheet-mascot{
+      position:absolute;
+      top:-42px;
+      right:56px;
+      width:88px;
+      height:88px;
+      object-fit:contain;
+      pointer-events:none;
+      filter:drop-shadow(0 6px 8px rgba(0,0,0,.35));
+    }
+    .mobile-sheet-scroll{
+      flex:1;
+      min-height:0;
+      overflow-y:auto;
+      padding:4px 14px 10px;
+    }
     .mobile-sheet-title{
       color:var(--muted);
       font-size:10.5px;
@@ -435,6 +494,13 @@
     text-align:center;
     min-width:78px;
   }
+  .stat-pill-icon{
+    display:block;
+    margin-bottom:4px;
+    line-height:1;
+  }
+  .stat-pill-icon i{font-size:19px;}
+  .stat-pill-icon svg{width:18px; height:18px; vertical-align:middle;}
   .stat-pill .num{
     font-family:'JetBrains Mono',monospace;
     font-weight:700;
@@ -837,8 +903,20 @@
     color:var(--muted);
   }
   .user-name{
+    display:flex;
+    align-items:center;
+    gap:8px;
     color:var(--ink-dim);
     font-weight:600;
+  }
+  .user-avatar{
+    width:26px;
+    height:26px;
+    border-radius:50%;
+    object-fit:contain;
+    background:var(--bg-panel-raised);
+    border:1px solid var(--line);
+    flex-shrink:0;
   }
   .user-role{
     padding:3px 9px;

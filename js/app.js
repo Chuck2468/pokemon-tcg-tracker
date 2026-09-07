@@ -39,6 +39,78 @@ function toggleTheme(){
   render();
 }
 
+// ---- Avatares e ilustraciones temáticas ----
+// No generamos ni dibujamos nosotros a Pikachu/Squirtle/etc. (son personajes
+// con copyright de Nintendo/Game Freak): enlazamos al sprite oficial alojado
+// en el CDN público de PokeAPI, la misma fuente que usan incontables apps de
+// aficionados — el mismo principio que ya seguimos con las imágenes reales
+// de las cartas (tcgdex). Para cambiar el roster de avatares o la mascota de
+// "Colecciones" basta con tocar esta lista.
+const POKEAPI_ARTWORK_BASE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork";
+
+function pokeArtworkUrl(id){
+  return `${POKEAPI_ARTWORK_BASE}/${id}.png`;
+}
+
+const AVATAR_ROSTER = [
+  { id: 1, name: "Bulbasaur" },
+  { id: 4, name: "Charmander" },
+  { id: 7, name: "Squirtle" },
+  { id: 25, name: "Pikachu" },
+  { id: 54, name: "Psyduck" },
+  { id: 133, name: "Eevee" }
+];
+
+// Hash simple y estable (djb2) para que la misma persona reciba siempre el
+// mismo avatar entre sesiones, sin tener que guardar nada en Supabase: se
+// deriva directamente de su nombre de sesión.
+function hashString(str){
+  let hash = 5381;
+  for(let i = 0; i < str.length; i++){
+    hash = ((hash << 5) + hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function avatarForUser(name){
+  const pick = AVATAR_ROSTER[hashString(name || "") % AVATAR_ROSTER.length];
+  return { ...pick, url: pokeArtworkUrl(pick.id) };
+}
+
+// Bola pequeña (rojo/crema/negro) para el stat "Play Set": mismo nivel de
+// abstracción que ya usamos en el sidebar — un icono genérico de "bola",
+// no una reproducción detallada del logo de Poké Ball.
+function miniBallIconSvg(){
+  return `<svg width="18" height="18" viewBox="0 0 32 32" aria-hidden="true">
+    <circle cx="16" cy="16" r="14.5" fill="#ef4444" stroke="#12141c" stroke-width="1.5"/>
+    <path d="M1.5 16 A14.5 14.5 0 0 0 30.5 16 Z" fill="#f8fafc"/>
+    <rect x="1.5" y="14.5" width="29" height="3" fill="#12141c"/>
+    <circle cx="16" cy="16" r="5" fill="#12141c"/>
+    <circle cx="16" cy="16" r="3" fill="#f8fafc"/>
+  </svg>`;
+}
+
+// Icono opcional que acompaña a cada stat-pill (Copias/Cartas/Play Set/
+// Master Set); si una etiqueta no está en el mapa, la pill se pinta igual
+// que antes mismo, sin icono.
+const STAT_PILL_ICONS = {
+  "Copias": `<i class="ti ti-cards" style="color:var(--poke);" aria-hidden="true"></i>`,
+  "Cartas": `<i class="ti ti-stack-2" style="color:var(--poke);" aria-hidden="true"></i>`,
+  "Play Set": miniBallIconSvg(),
+  "Master Set": `<i class="ti ti-crown" style="color:#eab308;" aria-hidden="true"></i>`
+};
+
+function buildStatPillHtml(value, label){
+  const icon = STAT_PILL_ICONS[label];
+  return `
+    <div class="stat-pill">
+      ${icon ? `<span class="stat-pill-icon">${icon}</span>` : ""}
+      <span class="num">${value}</span>
+      <span class="lbl">${label}</span>
+    </div>`;
+}
+
 // Guards against handling the same session twice (e.g. an explicit getSession()
 // check racing with the SIGNED_IN/INITIAL_SESSION event for the same session).
 let handledSessionId = null;
@@ -373,9 +445,17 @@ function buildMobileNavHtml(){
       </div>`;
     }).join("");
     panelHtml = `
-      <div class="mobile-sheet mobile-sheet-nav">
-        <div class="mobile-sheet-title">Colecciones</div>
-        ${items}
+      <div class="mobile-sheet mobile-sheet-nav mobile-sheet-has-hero">
+        <div class="mobile-sheet-hero">
+          <div class="mobile-sheet-hero-title">Colecciones</div>
+          <button type="button" class="mobile-sheet-close" data-mobile-close="1" aria-label="Cerrar">
+            <i class="ti ti-x" aria-hidden="true"></i>
+          </button>
+          <img class="mobile-sheet-mascot" src="${pokeArtworkUrl(25)}" alt="" aria-hidden="true">
+        </div>
+        <div class="mobile-sheet-scroll">
+          ${items}
+        </div>
       </div>`;
   } else if(open === "herramientas"){
     panelHtml = `
@@ -488,10 +568,15 @@ function buildUserPanelHtml(collectionId){
       <button id="syncAllBtn" class="sync-btn">Sync All</button>
     </div>` : "";
 
+  const avatar = avatarForUser(state.user.name);
+
   return `
    <div class="user-panel">
      ${syncActionsHtml}
-     <div class="user-name">👤 ${escapeHtml(state.user.name)}</div>
+     <div class="user-name">
+       <img class="user-avatar" src="${avatar.url}" alt="" title="${escapeHtml(avatar.name)}">
+       ${escapeHtml(state.user.name)}
+     </div>
      <div class="user-role">${roleName}</div>
      <button id="logoutBtn" class="logout-btn">Cerrar sesión</button>
    </div>
@@ -597,9 +682,9 @@ function render(){
           <h1><span style="color:${meta.accent}">${escapeHtml(meta.name)}</span></h1>
         </div>
         <div class="stats">
-          <div class="stat-pill"><span class="num">${maestro.copies}</span><span class="lbl">Copias</span></div>
-          <div class="stat-pill"><span class="num">${juego.pct}%</span><span class="lbl">Play Set</span></div>
-          <div class="stat-pill"><span class="num">${maestro.pct}%</span><span class="lbl">Master Set</span></div>
+          ${buildStatPillHtml(maestro.copies, "Copias")}
+          ${buildStatPillHtml(juego.pct + "%", "Play Set")}
+          ${buildStatPillHtml(maestro.pct + "%", "Master Set")}
         </div>
       </div>
 
@@ -731,8 +816,8 @@ function renderInventory(sidebarHtml){
           <h1>Mi <span style="color:var(--electric-blue)">Inventario</span></h1>
         </div>
         <div class="stats">
-          <div class="stat-pill"><span class="num">${totalCards}</span><span class="lbl">Cartas</span></div>
-          <div class="stat-pill"><span class="num">${totalCopies}</span><span class="lbl">Copias</span></div>
+          ${buildStatPillHtml(totalCards, "Cartas")}
+          ${buildStatPillHtml(totalCopies, "Copias")}
         </div>
       </div>
 
@@ -1019,8 +1104,8 @@ function renderBsp(sidebarHtml, meta){
           <h1><span style="color:${meta.accent}">${escapeHtml(meta.name)}</span></h1>
         </div>
         <div class="stats">
-          <div class="stat-pill"><span class="num">${totalCopies}</span><span class="lbl">Copias</span></div>
-          <div class="stat-pill"><span class="num">${totalCards}</span><span class="lbl">Cartas</span></div>
+          ${buildStatPillHtml(totalCopies, "Copias")}
+          ${buildStatPillHtml(totalCards, "Cartas")}
         </div>
       </div>
 
