@@ -52,30 +52,31 @@ function pokeArtworkUrl(id){
   return `${POKEAPI_ARTWORK_BASE}/${id}.png`;
 }
 
+// Avatares propios (ilustraciones encargadas aparte, no sprites de PokeAPI):
+// el admin asigna a cada usuario un avatar_id numérico directamente en la
+// tabla authorized_users de Supabase, y aquí solo lo traducimos a la imagen
+// que le corresponde. Para añadir un avatar nuevo: soltar el PNG en
+// assets/avatars/ y añadir una entrada aquí con el siguiente id.
 const AVATAR_ROSTER = [
-  { id: 1, name: "Bulbasaur" },
-  { id: 4, name: "Charmander" },
-  { id: 7, name: "Squirtle" },
-  { id: 25, name: "Pikachu" },
-  { id: 54, name: "Psyduck" },
-  { id: 133, name: "Eevee" }
+  { id: 0, name: "Squirtle", file: "squirtle.png" },
+  { id: 1, name: "Charmander", file: "charmander.png" },
+  { id: 2, name: "Bulbasaur", file: "bulbasaur.png" },
+  { id: 3, name: "Umbreon", file: "umbreon.png" },
+  { id: 4, name: "Mawile", file: "mawile.png" }
 ];
 
-// Hash simple y estable (djb2) para que la misma persona reciba siempre el
-// mismo avatar entre sesiones, sin tener que guardar nada en Supabase: se
-// deriva directamente de su nombre de sesión.
-function hashString(str){
-  let hash = 5381;
-  for(let i = 0; i < str.length; i++){
-    hash = ((hash << 5) + hash) + str.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash);
+const DEFAULT_AVATAR = AVATAR_ROSTER[0];
+
+function avatarUrl(file){
+  return `assets/avatars/${file}`;
 }
 
-function avatarForUser(name){
-  const pick = AVATAR_ROSTER[hashString(name || "") % AVATAR_ROSTER.length];
-  return { ...pick, url: pokeArtworkUrl(pick.id) };
+// avatarId puede ser null/undefined (usuario aún sin asignar por el admin) o
+// no corresponder a ningún id conocido: en ambos casos caemos al avatar por
+// defecto en vez de dejar el <img> roto.
+function avatarForId(avatarId){
+  const pick = AVATAR_ROSTER.find(a => a.id === avatarId) || DEFAULT_AVATAR;
+  return { ...pick, url: avatarUrl(pick.file) };
 }
 
 // Bola pequeña (rojo/crema/negro) para el stat "Play Set": mismo nivel de
@@ -134,15 +135,16 @@ async function handleSession(session) {
   if (session.access_token === handledSessionId) return;
   handledSessionId = session.access_token;
   const user = await auth.getUser();
-  const role = await userRepository.getRole(user.id);
-  if (!role) {
+  const profile = await userRepository.getProfile(user.id);
+  if (!profile) {
     state.user = null;
     renderUnauthorized();
     return;
   }
   state.user = {
     id: user.id,
-    role,
+    role: profile.role,
+    avatarId: profile.avatarId,
     name:
       user.user_metadata?.full_name ||
       user.user_metadata?.name ||
@@ -151,7 +153,7 @@ async function handleSession(session) {
   };
   // Los viewers no tienen acceso al listado de colecciones, así que
   // siempre aterrizan en el Inventario en vez de en la primera colección.
-  if (role !== "admin") {
+  if (profile.role !== "admin") {
     state.activeId = INVENTORY_ID;
   }
   await startApp();
@@ -459,21 +461,28 @@ function buildMobileNavHtml(){
       </div>`;
   } else if(open === "herramientas"){
     panelHtml = `
-      <div class="mobile-sheet mobile-sheet-nav">
-        <div class="mobile-sheet-title">Herramientas</div>
-        <div class="mobile-sheet-item ${state.activeId === DECKCHECK_ID ? "active" : ""}" data-collection="${DECKCHECK_ID}">
-          <i class="ti ti-clipboard-check" aria-hidden="true"></i>
-          <span class="sidebar-name">
-            <span class="sidebar-name-title">Comprobador de Mazos</span>
-          </span>
+      <div class="mobile-sheet mobile-sheet-nav mobile-sheet-has-hero">
+        <div class="mobile-sheet-hero">
+          <div class="mobile-sheet-hero-title">Herramientas</div>
+          <button type="button" class="mobile-sheet-close" data-mobile-close="1" aria-label="Cerrar">
+            <i class="ti ti-x" aria-hidden="true"></i>
+          </button>
         </div>
-        <div class="mobile-sheet-item disabled">
-          <i class="ti ti-plus" aria-hidden="true"></i>
-          <span class="sidebar-name">
-            <span class="sidebar-name-title">Próximas herramientas aquí</span>
-          </span>
+        <div class="mobile-sheet-scroll">
+          <div class="mobile-sheet-item ${state.activeId === DECKCHECK_ID ? "active" : ""}" data-collection="${DECKCHECK_ID}">
+            <i class="ti ti-clipboard-check" aria-hidden="true"></i>
+            <span class="sidebar-name">
+              <span class="sidebar-name-title">Comprobador de Mazos</span>
+            </span>
+          </div>
+          <div class="mobile-sheet-item disabled">
+            <i class="ti ti-plus" aria-hidden="true"></i>
+            <span class="sidebar-name">
+              <span class="sidebar-name-title">Próximas herramientas aquí</span>
+            </span>
+          </div>
+          ${buildThemeToggleHtml()}
         </div>
-        ${buildThemeToggleHtml()}
       </div>`;
   } else if(open === "filtro" && hasFilters){
     panelHtml = buildMobileFilterSheetHtml();
@@ -568,7 +577,7 @@ function buildUserPanelHtml(collectionId){
       <button id="syncAllBtn" class="sync-btn">Sync All</button>
     </div>` : "";
 
-  const avatar = avatarForUser(state.user.name);
+  const avatar = avatarForId(state.user.avatarId);
 
   return `
    <div class="user-panel">

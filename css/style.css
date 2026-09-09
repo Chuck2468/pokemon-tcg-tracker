@@ -436,12 +436,11 @@
     .mobile-sheet-nav .sidebar-name-abbr{color:var(--sidebar-muted);}
     .mobile-sheet-nav .mobile-sheet-item.active .sidebar-name-abbr{color:var(--sidebar-ink);}
 
-    /* Tema claro, panel "Colecciones" (el único mobile-sheet-nav con hero):
-       la cabecera con el Pikachu se queda roja, pero el scroll con la lista
-       pasa a fondo blanco y texto oscuro normal (en vez de la paleta clara
-       pensada para fondo rojo), para que se lea mejor. El panel
-       "Herramientas" no lleva mobile-sheet-has-hero, así que no le afecta
-       y sigue en rojo. */
+    /* Tema claro, paneles "Colecciones" y "Herramientas" (los dos
+       mobile-sheet-nav con hero): la cabecera se queda roja (con o sin el
+       Pikachu), pero el scroll con la lista pasa a fondo blanco y texto
+       oscuro normal (en vez de la paleta clara pensada para fondo rojo),
+       para que se lea mejor. */
     :root[data-theme="light"] .mobile-sheet-has-hero .mobile-sheet-hero{
       background:var(--sidebar-bg);
     }
@@ -972,10 +971,10 @@
     font-weight:600;
   }
   .user-avatar{
-    width:26px;
-    height:26px;
+    width:40px;
+    height:40px;
     border-radius:50%;
-    object-fit:contain;
+    object-fit:cover;
     background:var(--bg-panel-raised);
     border:1px solid var(--line);
     flex-shrink:0;
