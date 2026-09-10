@@ -582,12 +582,16 @@ function buildUserPanelHtml(collectionId){
   return `
    <div class="user-panel">
      ${syncActionsHtml}
-     <div class="user-name">
-       <img class="user-avatar" src="${avatar.url}" alt="" title="${escapeHtml(avatar.name)}">
-       ${escapeHtml(state.user.name)}
+     <div class="user-info-row">
+       <div class="user-identity">
+         <img class="user-avatar" src="${avatar.url}" alt="" title="${escapeHtml(avatar.name)}">
+         <span class="user-name" title="${escapeHtml(state.user.name)}">${escapeHtml(state.user.name)}</span>
+       </div>
+       <div class="user-meta">
+         <div class="user-role">${roleName}</div>
+         <button id="logoutBtn" class="logout-btn">Cerrar sesión</button>
+       </div>
      </div>
-     <div class="user-role">${roleName}</div>
-     <button id="logoutBtn" class="logout-btn">Cerrar sesión</button>
    </div>
   `;
 }

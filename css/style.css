@@ -576,6 +576,26 @@
     letter-spacing:.06em;
   }
 
+  @media (max-width:680px){
+    /* En escritorio el header cabe en una fila (título a la izquierda,
+       stats a la derecha); en móvil el título ya fuerza el salto de línea,
+       así que apilamos explícitamente y hacemos que las tarjetas de stats
+       (2 en Inventario, 3 en una colección) repartan todo el ancho
+       disponible a partes iguales, en vez de quedarse agrupadas a la
+       izquierda con su min-width mínimo. */
+    .header{
+      flex-direction:column;
+      align-items:stretch;
+    }
+    .stats{
+      width:100%;
+    }
+    .stat-pill{
+      flex:1 1 0;
+      min-width:0;
+    }
+  }
+
   /* progress bar - signature element: a "binder" completion strip */
   .progress-strip{
     margin:0 0 12px;
@@ -951,24 +971,39 @@
     .variant-badge.readonly{width:52px; padding:3px 2px;}
   }
 
-  /* ---- User panel (name / role / logout) ---- */
+  /* ---- User panel (sync / identidad / rol / logout) ----
+     Estructura en dos filas siempre presentes en el mismo orden:
+       1. sync-actions (solo admin + vista de colección) — su propia fila,
+          para que NO comparta el flujo flex con lo de abajo: así el resto
+          del panel no se desplaza según si esta fila existe o no (antes
+          todo iba en la misma fila con un margin-right:auto de "empuje",
+          y el punto de salto de línea cambiaba según hubiera o no sync).
+       2. user-info-row: avatar+nombre a la izquierda (user-identity) y
+          rol+logout agrupados a la derecha (user-meta), siempre los dos
+          mismos bloques en el mismo sitio. El nombre trunca con "…" en
+          vez de forzar el salto de línea, así que da igual lo largo que
+          sea: la fila no cambia de forma con distintos usuarios. */
   .user-panel{
     display:flex;
-    align-items:center;
-    justify-content:flex-end;
-    flex-wrap:wrap;
+    flex-direction:column;
     gap:10px;
     margin-bottom:16px;
     font-family:'JetBrains Mono',monospace;
     font-size:11.5px;
     color:var(--muted);
   }
-  .user-name{
+  .user-info-row{
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:8px 12px;
+  }
+  .user-identity{
     display:flex;
     align-items:center;
     gap:8px;
-    color:var(--ink-dim);
-    font-weight:600;
+    min-width:0;
+    flex:1 1 160px;
   }
   .user-avatar{
     width:40px;
@@ -978,6 +1013,23 @@
     background:var(--bg-panel-raised);
     border:1px solid var(--line);
     flex-shrink:0;
+  }
+  .user-name{
+    color:var(--ink-dim);
+    font-weight:600;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .user-meta{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-shrink:0;
+    margin-left:auto; /* ancla rol+logout al extremo derecho, tanto si
+                          comparten fila con el nombre como si, por falta de
+                          espacio, caen a su propia línea debajo */
   }
   .user-role{
     padding:3px 9px;
@@ -1005,11 +1057,10 @@
     color:var(--partidario);
   }
 
-  /* ---- Sync / Sync All: admin, alineados a la izquierda del user-panel ---- */
+  /* ---- Sync / Sync All ---- */
   .sync-actions{
     display:flex;
     gap:8px;
-    margin-right:auto; /* empuja el resto (nombre/rol/logout) al extremo derecho */
   }
   .sync-btn{
     font-family:'JetBrains Mono',monospace;
