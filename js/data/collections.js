@@ -1,3 +1,4 @@
+import dlr from "./dlr.js";
 import pbl from "./pbl.js";
 import cri from "./cri.js";
 import por from "./por.js";
@@ -28,7 +29,18 @@ import mep from "./mep.js";
 import svp from "./svp.js";
 
 export const COLLECTIONS = [
- {
+  {
+    id: "dlr",
+    name: "Dominio Delta [DLR]",
+    eyebrow: "Set DLR · Trainer Box",
+    storageKey: "dlr-collection",
+    gameSetMax: 76,
+    tcgdexSeries: "me",
+    tcgdexSet: "me06",
+    accent: "var(--poke)",
+    seed: dlr,
+  },
+  {
     id: "pbl",
     name: "Oscuridad Absoluta [PBL]",
     eyebrow: "Set PBL · Trainer Box",

@@ -566,34 +566,50 @@ function renderUnauthorized() {
     });
 }
 
-function buildUserPanelHtml(collectionId){
+// Panel de usuario: SOLO identidad + logout. Idéntico en las 4 vistas
+// (colección, inventario, deckcheck, bsp), así nunca cambia de forma según
+// dónde estés. Las acciones de Sync viven aparte (ver buildSyncActionsHtml),
+// pegadas al título de la colección a la que afectan, en vez de aquí.
+function buildUserPanelHtml(){
   if(!state.user) return "";
   const roleName = state.user.role === "admin" ? "Administrador" : "Consulta";
-  const isAdmin = state.user.role === "admin";
-
-  const syncActionsHtml = (isAdmin && collectionId) ? `
-    <div class="sync-actions">
-      <button id="syncBtn" class="sync-btn" data-collection="${collectionId}">Sync</button>
-      <button id="syncAllBtn" class="sync-btn">Sync All</button>
-    </div>` : "";
-
   const avatar = avatarForId(state.user.avatarId);
 
   return `
    <div class="user-panel">
-     ${syncActionsHtml}
-     <div class="user-info-row">
-       <div class="user-identity">
-         <img class="user-avatar" src="${avatar.url}" alt="" title="${escapeHtml(avatar.name)}">
-         <span class="user-name" title="${escapeHtml(state.user.name)}">${escapeHtml(state.user.name)}</span>
-       </div>
-       <div class="user-meta">
+     <div class="user-identity">
+       <img class="user-avatar" src="${avatar.url}" alt="" title="${escapeHtml(avatar.name)}">
+       <div class="user-text">
+         <div class="user-name" title="${escapeHtml(state.user.name)}">${escapeHtml(state.user.name)}</div>
          <div class="user-role">${roleName}</div>
-         <button id="logoutBtn" class="logout-btn">Cerrar sesión</button>
        </div>
      </div>
+     <button id="logoutBtn" class="logout-btn" type="button">
+       <i class="ti ti-logout-2" aria-hidden="true"></i>
+       <span>Cerrar sesión</span>
+     </button>
    </div>
   `;
+}
+
+// Sync / Sync All: solo admin, solo cuando hay una colección real detrás
+// (no en Inventario ni en el Comprobador de Mazos, que no tienen una
+// colección concreta que sincronizar). Se pinta junto al título de la
+// colección afectada, no en el panel de usuario: así su presencia se
+// explica sola con el contexto de alrededor y su ausencia en otras vistas
+// no deja un hueco raro donde antes había botones.
+function buildSyncActionsHtml(collectionId){
+  const isAdmin = state.user?.role === "admin";
+  if(!isAdmin || !collectionId) return "";
+  return `
+    <div class="sync-actions">
+      <button id="syncBtn" class="sync-btn" data-collection="${collectionId}" type="button">
+        <i class="ti ti-refresh" aria-hidden="true"></i> Sync
+      </button>
+      <button id="syncAllBtn" class="sync-btn" type="button">
+        <i class="ti ti-refresh" aria-hidden="true"></i> Sync All
+      </button>
+    </div>`;
 }
 
 function render(){
@@ -633,7 +649,8 @@ function render(){
   const progressJuegoHtml = buildProgressHtml(juego.pct);
   const progressMaestroHtml = buildProgressHtml(maestro.pct);
 
-  const userInfoHtml = buildUserPanelHtml(state.activeId);
+  const userInfoHtml = buildUserPanelHtml();
+  const syncActionsHtml = buildSyncActionsHtml(state.activeId);
 
   const statusChipsHtml = ["ALL", "PENDING"].map(s => {
     const label = s === "ALL" ? "Todas" : "Pendientes";
@@ -693,6 +710,7 @@ function render(){
         <div class="title-block">
           <div class="eyebrow">${escapeHtml(meta.eyebrow)}</div>
           <h1><span style="color:${meta.accent}">${escapeHtml(meta.name)}</span></h1>
+          ${syncActionsHtml}
         </div>
         <div class="stats">
           ${buildStatPillHtml(maestro.copies, "Copias")}
@@ -1022,7 +1040,8 @@ function renderBsp(sidebarHtml, meta){
   }
 
   const editable = state.user?.role === "admin";
-  const userInfoHtml = buildUserPanelHtml(meta.id);
+  const userInfoHtml = buildUserPanelHtml();
+  const syncActionsHtml = buildSyncActionsHtml(meta.id);
 
   const statusChipsHtml = ["ALL", "PENDING"].map(s => {
     const label = s === "ALL" ? "Todas" : "Pendientes";
@@ -1115,6 +1134,7 @@ function renderBsp(sidebarHtml, meta){
         <div class="title-block">
           <div class="eyebrow">${escapeHtml(meta.eyebrow)}</div>
           <h1><span style="color:${meta.accent}">${escapeHtml(meta.name)}</span></h1>
+          ${syncActionsHtml}
         </div>
         <div class="stats">
           ${buildStatPillHtml(totalCopies, "Copias")}

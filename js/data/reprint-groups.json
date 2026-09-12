@@ -7932,7 +7932,180 @@
       "SVI 013",      
       "SVP 191"
     ]
-  },  
+  },
+  {
+    "reprintGroup": 10934,
+    "id": "Masquerain",
+    "reprints": [
+      "DLR 003",
+      "DLR 077"
+    ]
+  },
+  {
+    "reprintGroup": 10935,
+    "id": "Wimpod",
+    "reprints": [
+      "DLR 008",
+      "MEP 138"
+    ]
+  },
+  {
+    "reprintGroup": 10936,
+    "id": "Mega-Golisopod ex",
+    "reprints": [
+      "DLR 009",
+      "DLR 089",
+      "DLR 107"
+    ]
+  },
+  {
+    "reprintGroup": 10937,
+    "id": "Growlithe",
+    "reprints": [
+      "DLR 010",
+      "DLR 078"
+    ]
+  },
+  {
+    "reprintGroup": 10938,
+    "id": "Magmortar",
+    "reprints": [
+      "DLR 013",
+      "DLR 079"
+    ]
+  },
+  {
+    "reprintGroup": 10939,
+    "id": "Rotom Calor ex",
+    "reprints": [
+      "DLR 015",
+      "DLR 090"
+    ]
+  },
+  {
+    "reprintGroup": 10940,
+    "id": "Kyogre",
+    "reprints": [
+      "DLR 018",
+      "DLR 080"
+    ]
+  },
+  {
+    "reprintGroup": 10941,
+    "id": "Wishiwashi ex",
+    "reprints": [
+      "DLR 021",
+      "DLR 091"
+    ]
+  },
+  {
+    "reprintGroup": 10942,
+    "id": "Electivire",
+    "reprints": [
+      "DLR 023",
+      "DLR 081"
+    ]
+  },
+  {
+    "reprintGroup": 10943,
+    "id": "Raikou ex",
+    "reprints": [
+      "DLR 024",
+      "DLR 092",
+      "DLR 108"
+    ]
+  },
+  {
+    "reprintGroup": 10944,
+    "id": "Pincurchin",
+    "reprints": [
+      "DLR 026",
+      "DLR 082"
+    ]
+  },
+  {
+    "reprintGroup": 10945,
+    "id": "Mega-Golurk ex",
+    "reprints": [
+      "DLR 033",
+      "DLR 093",
+      "DLR 109"
+    ]
+  },
+  {
+    "reprintGroup": 10946,
+    "id": "Enamorus",
+    "reprints": [
+      "DLR 034",
+      "DLR 083"
+    ]
+  },
+  {
+    "reprintGroup": 10947,
+    "id": "Groudon",
+    "reprints": [
+      "DLR 039",
+      "DLR 084"
+    ]
+  },
+  {
+    "reprintGroup": 10948,
+    "id": "Inkay",
+    "reprints": [
+      "DLR 047",
+      "DLR 085"
+    ]
+  },
+  {
+    "reprintGroup": 10949,
+    "id": "Mega-Malamar ex",
+    "reprints": [
+      "DLR 048",
+      "DLR 094"
+    ]
+  },
+  {
+    "reprintGroup": 10950,
+    "id": "Azurill",
+    "reprints": [
+      "DLR 054",
+      "DLR 086"
+    ]
+  },
+  {
+    "reprintGroup": 10951,
+    "id": "Altaria",
+    "reprints": [
+      "DLR 056",
+      "DLR 087"
+    ]
+  },
+  {
+    "reprintGroup": 10952,
+    "id": "Kecleon",
+    "reprints": [
+      "DLR 057",
+      "DLR 088"
+    ]
+  },
+  {
+    "reprintGroup": 10953,
+    "id": "Mega-Rayquaza ex",
+    "reprints": [
+      "DLR 058",
+      "DLR 095",
+      "DLR 110",
+      "DLR 113"
+    ]
+  },
+  {
+    "reprintGroup": 10955,
+    "id": "Talonflame ex",
+    "reprints": [
+      "DLR 062",
+      "DLR 096"
+    ]
+  },
   {
     "reprintGroup": 20000,
     "tipo": "Objeto",
@@ -9497,6 +9670,16 @@
     "reprintGroup": 20312,
     "tipo": "Objeto",
     "nombre": "Oleada tropical"
+  },
+  {
+    "reprintGroup": 20313,
+    "tipo": "Objeto",
+    "nombre": "Delicious Onigiri"
+  },
+  {
+    "reprintGroup": 20314,
+    "tipo": "Objeto",
+    "nombre": "Adventuring Lantern"
   },
   {
     "reprintGroup": 30000,
@@ -11444,6 +11627,21 @@
     "nombre": "Dominguera"
   },
   {
+    "reprintGroup": 30389,
+    "tipo": "Partidario",
+    "nombre": "Perico"
+  },
+  {
+    "reprintGroup": 30390,
+    "tipo": "Partidario",
+    "nombre": "Confianza de Tristana"
+  },
+  {
+    "reprintGroup": 30391,
+    "tipo": "Partidario",
+    "nombre": "Entrenamiento de Vito y Leti"
+  },
+  {
     "reprintGroup": 40000,
     "tipo": "Estadio",
     "nombre": "Cantera de Fósiles"
@@ -12112,6 +12310,21 @@
     "reprintGroup": 40133,
     "tipo": "Estadio",
     "nombre": "Ruinas Alfa"
+  },
+  {
+    "reprintGroup": 40134,
+    "tipo": "Estadio",
+    "nombre": "Fosa Oceánica Legendaria"
+  },
+  {
+    "reprintGroup": 40135,
+    "tipo": "Estadio",
+    "nombre": "Pico Legendario"
+  },
+  {
+    "reprintGroup": 40136,
+    "tipo": "Estadio",
+    "nombre": "Cueva de Lava Legendaria"
   },
   {
     "reprintGroup": 50000,
@@ -13188,6 +13401,16 @@
     "tipo": "Herramienta",
     "nombre": "Garra Oscura"
   },
+  {
+    "reprintGroup": 50215,
+    "tipo": "Herramienta",
+    "nombre": "Chaleco Especial"
+  },
+  {
+    "reprintGroup": 50216,
+    "tipo": "Herramienta",
+    "nombre": "Gorra de Mega-Rayquaza"
+  },  
   {
     "reprintGroup": 60000,
     "tipo": "Energía",
