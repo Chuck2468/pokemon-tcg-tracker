@@ -1,4 +1,5 @@
 import dlr from "./dlr.js";
+import c30 from "./c30.js";
 import pbl from "./pbl.js";
 import cri from "./cri.js";
 import por from "./por.js";
@@ -40,6 +41,17 @@ export const COLLECTIONS = [
     accent: "var(--poke)",
     seed: dlr,
   },
+  {
+    id: "c30",
+    name: "Celebración 30 Aniv. [30C]",
+    eyebrow: "Set 30C · Trainer Box",
+    storageKey: "30c-collection",
+    gameSetMax: 128,
+    tcgdexSeries: "me",
+    tcgdexSet: "30th",
+    accent: "var(--poke)",
+    seed: c30,
+  },  
   {
     id: "pbl",
     name: "Oscuridad Absoluta [PBL]",
