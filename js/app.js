@@ -1100,18 +1100,18 @@ function renderDamageCalc(sidebarHtml){
     <div class="damage-attackers">
       <div class="damage-attacker-card ${isOgerpon ? "active" : ""}" data-attacker="ogerpon">
         <img src="assets/damagecalc/ogerpon-turquesa-ex.png" alt="Ogerpon Máscara Turquesa ex" loading="lazy">
-        <span class="damage-attacker-name">Ogerpon Máscara Turquesa ex</span>
       </div>
       <div class="damage-attacker-card ${!isOgerpon ? "active" : ""}" data-attacker="megameganium">
         <img src="assets/damagecalc/mega-meganium.png" alt="Mega Meganium" loading="lazy">
-        <span class="damage-attacker-name">Mega Meganium</span>
       </div>
     </div>`;
 
   const controlsHtml = isOgerpon ? `
     <div class="damage-controls">
-      ${buildEnergyCounterHtml("Energías propias (Ogerpon)", dc.myEnergy, "my")}
-      ${buildEnergyCounterHtml("Energías del rival", dc.rivalEnergy, "rival")}
+      <div class="damage-energy-row">
+        ${buildEnergyCounterHtml("Energías propias", dc.myEnergy, "my")}
+        ${buildEnergyCounterHtml("Energías del rival", dc.rivalEnergy, "rival")}
+      </div>
       <div class="damage-toggles">
         <button type="button" class="damage-toggle ${dc.meganiumBench ? "active" : ""}" data-damage-toggle="meganiumBench">
           <i class="ti ti-shield-check" aria-hidden="true"></i> Meganium en banca (energías propias x2)
@@ -1122,7 +1122,7 @@ function renderDamageCalc(sidebarHtml){
       </div>
     </div>` : `
     <div class="damage-controls">
-      ${buildEnergyCounterHtml("Energías propias (Mega Meganium)", dc.myEnergy, "my")}
+      ${buildEnergyCounterHtml("Energías propias", dc.myEnergy, "my")}
       <div class="damage-toggles">
         <button type="button" class="damage-toggle ${dc.typeAdvantage ? "active" : ""}" data-damage-toggle="typeAdvantage">
           <i class="ti ti-swords" aria-hidden="true"></i> Ventaja de tipo (x2)
