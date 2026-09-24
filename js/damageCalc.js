@@ -15,9 +15,12 @@ export function ogerponDamage({ myEnergy, rivalEnergy, meganiumBench, typeAdvant
 
 // ---- Mega Meganium ----
 // Daño: 70 + 50 por cada energía unida a Mega Meganium. Las energías del
-// rival no afectan a este ataque. Ventaja de tipo duplica el total.
-export function meganiumDamage({ myEnergy, typeAdvantage }){
-  const base = 70 + 50 * myEnergy;
+// rival no afectan a este ataque. Igual que con Ogerpon, un Meganium
+// (no-Mega) en la banca duplica las energías propias, y la ventaja de
+// tipo duplica el total al final.
+export function meganiumDamage({ myEnergy, meganiumBench, typeAdvantage }){
+  const myCount = myEnergy * (meganiumBench ? 2 : 1);
+  const base = 70 + 50 * myCount;
   return typeAdvantage ? base * 2 : base;
 }
 
@@ -52,14 +55,38 @@ export function ogerponEnergyNeeded({ myEnergy, rivalEnergy, meganiumBench, type
   return { extraMine, extraRival };
 }
 
-export function meganiumEnergyNeeded({ myEnergy, typeAdvantage, rivalHp }){
+export function meganiumEnergyNeeded({ myEnergy, meganiumBench, typeAdvantage, rivalHp }){
   const hp = Number(rivalHp);
   if(!rivalHp || !Number.isFinite(hp) || hp <= 0) return null;
 
   const extraMine = extraNeeded(
-    n => meganiumDamage({ myEnergy: n, typeAdvantage }),
+    n => meganiumDamage({ myEnergy: n, meganiumBench, typeAdvantage }),
     myEnergy, hp
   );
 
   return { extraMine };
+}
+
+// ---- Chandelure ----
+// Daño: 30 por cada carta en la mano del rival. Sin banca de Meganium (no
+// aplica a esta pareja). Ventaja de tipo duplica el total.
+export function chandelureDamage({ rivalHandCards, typeAdvantage }){
+  const base = 30 * rivalHandCards;
+  return typeAdvantage ? base * 2 : base;
+}
+
+// ---- Mega Chandelure ----
+// Coste de retirada total del rival: su coste de retirada base, +1 por
+// cada Mega Chandelure propio en banca, -2 si lleva Globo Helio (sin
+// bajar de 0).
+export function megaChandelureRetreatCost({ retreatCost, megaCount, airBalloon }){
+  return Math.max(0, retreatCost + megaCount - (airBalloon ? 2 : 0));
+}
+
+// Daño: 170 + 50 por cada punto de ese coste de retirada total. Ventaja de
+// tipo duplica el total.
+export function megaChandelureDamage({ retreatCost, megaCount, airBalloon, typeAdvantage }){
+  const totalRetreat = megaChandelureRetreatCost({ retreatCost, megaCount, airBalloon });
+  const base = 170 + 50 * totalRetreat;
+  return typeAdvantage ? base * 2 : base;
 }

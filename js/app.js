@@ -3,7 +3,7 @@ import { storage } from "./cardRepository.js";
 import { TYPE_COLORS,TYPE_SOFT,TYPES,VARIANTS } from "./constants.js";
 import { COLLECTIONS } from "./data/collections.js";
 import { userRepository } from "./userRepository.js";
-import { state, INVENTORY_ID, DECKCHECK_ID, DAMAGECALC_ID } from "./state.js";
+import { state, INVENTORY_ID, DECKCHECK_ID, DAMAGECALC_MEGANIUM_ID, DAMAGECALC_CHANDELURE_ID, DAMAGECALC_IDS } from "./state.js";
 import {
   escapeHtml,
   getMeta,
@@ -25,7 +25,7 @@ import {
   filteredCards
 } from "./collectionsService.js";
 import { checkDeckAgainstInventory } from "./deckChecker.js";
-import { ogerponDamage, meganiumDamage, ogerponEnergyNeeded, meganiumEnergyNeeded } from "./damageCalc.js";
+import { ogerponDamage, meganiumDamage, ogerponEnergyNeeded, meganiumEnergyNeeded, chandelureDamage, megaChandelureDamage, megaChandelureRetreatCost } from "./damageCalc.js";
 import { getPreferredTheme, applyTheme } from "./theme.js";
 
 // Se aplica de inmediato, al cargar el módulo, antes de esperar a la sesión
@@ -211,9 +211,9 @@ async function handleSyncClick(btn, syncFn){
 function selectCollection(id){
   if(id === state.activeId) return;
   // Los viewers no pueden navegar a colecciones individuales, solo a las
-  // herramientas de solo lectura: Inventario, Comprobador de Mazos y
-  // Calculadora de Daño.
-  if(id !== INVENTORY_ID && id !== DECKCHECK_ID && id !== DAMAGECALC_ID && state.user?.role !== "admin") return;
+  // herramientas de solo lectura: Inventario, Comprobador de Mazos y las
+  // Calculadoras de Daño.
+  if(id !== INVENTORY_ID && id !== DECKCHECK_ID && !DAMAGECALC_IDS.includes(id) && state.user?.role !== "admin") return;
 
   state.activeId = id;
   state.search = "";
@@ -233,9 +233,9 @@ function selectCollection(id){
     return;
   }
 
-  // La Calculadora de Daño no depende del stock de ninguna colección, así
+  // Las Calculadoras de Daño no dependen del stock de ninguna colección, así
   // que no hay nada que cargar: solo repintar.
-  if(id === DAMAGECALC_ID){
+  if(DAMAGECALC_IDS.includes(id)){
     render();
     return;
   }
@@ -301,6 +301,21 @@ function buildThemeToggleHtml(){
     </button>`;
 }
 
+// Un ítem de "Calculadora de Daño" por cada pareja de cartas (ver
+// DAMAGECALC_IDS en state.js). Se reutiliza tanto en el sidebar de
+// escritorio (wrapperClass="sidebar-item sidebar-item-inventory") como en
+// el panel de herramientas móvil (wrapperClass="mobile-sheet-item").
+function buildDamageCalcItemHtml(id, pairLabel, wrapperClass){
+  return `
+    <div class="${wrapperClass} ${state.activeId === id ? "active" : ""}" data-collection="${id}">
+      <i class="ti ti-bolt" aria-hidden="true"></i>
+      <span class="sidebar-name sidebar-name-inline-on-mobile">
+        <span class="sidebar-name-title">Calculadora de Daño</span>
+        <span class="sidebar-name-abbr">${escapeHtml(pairLabel)}</span>
+      </span>
+    </div>`;
+}
+
 function buildSidebarHtml(){
   const isAdmin = state.user?.role === "admin";
 
@@ -320,16 +335,15 @@ function buildSidebarHtml(){
       </span>
     </div>`;
 
-  const damageCalcItem = `
-    <div class="sidebar-item sidebar-item-inventory ${state.activeId === DAMAGECALC_ID ? "active" : ""}" data-collection="${DAMAGECALC_ID}">
-      <i class="ti ti-bolt" aria-hidden="true"></i>
-      <span class="sidebar-name">
-        <span class="sidebar-name-title">Calculadora de Daño</span>
-      </span>
-    </div>`;
+  const damageCalcMeganiumItem = buildDamageCalcItemHtml(
+    DAMAGECALC_MEGANIUM_ID, "[Ogerpon & Mega-Meganium]", "sidebar-item sidebar-item-inventory"
+  );
+  const damageCalcChandelureItem = buildDamageCalcItemHtml(
+    DAMAGECALC_CHANDELURE_ID, "[Chandelure & Mega-Chandelure]", "sidebar-item sidebar-item-inventory"
+  );
 
   // Los viewers solo ven las herramientas de solo lectura (Inventario,
-  // Comprobador de Mazos, Calculadora de Daño): sin listado de colecciones
+  // Comprobador de Mazos, Calculadoras de Daño): sin listado de colecciones
   // ni botones de edición.
   if(!isAdmin){
     return `
@@ -337,7 +351,8 @@ function buildSidebarHtml(){
       <div class="sidebar-title">Herramientas</div>
       ${inventoryItem}
       ${deckCheckItem}
-      ${damageCalcItem}
+      ${damageCalcMeganiumItem}
+      ${damageCalcChandelureItem}
       <div class="sidebar-footer">
         ${buildThemeToggleHtml()}
       </div>
@@ -360,7 +375,8 @@ function buildSidebarHtml(){
       <div class="sidebar-title">Herramientas</div>
       ${inventoryItem}
       ${deckCheckItem}
-      ${damageCalcItem}
+      ${damageCalcMeganiumItem}
+      ${damageCalcChandelureItem}
       <div class="sidebar-title">Colecciones</div>
       ${items}
       <div class="sidebar-footer">
@@ -446,12 +462,12 @@ function buildMobileNavHtml(){
   // dentro de esa sección (una colección concreta, o el Comprobador de
   // Mazos) aunque el panel esté cerrado. Sin esto, el marco desaparecía en
   // cuanto se elegía un elemento y se cerraba la hoja desplegable.
-  const isCollectionView = state.activeId !== INVENTORY_ID && state.activeId !== DECKCHECK_ID && state.activeId !== DAMAGECALC_ID;
-  const isToolsView = state.activeId === DECKCHECK_ID || state.activeId === DAMAGECALC_ID;
-  // Ni el Comprobador de Mazos ni la Calculadora de Daño tienen búsqueda ni
-  // chips que filtrar, así que el botón "Filtro" no tiene sentido en esas
-  // vistas: se oculta en vez de abrir un panel vacío.
-  const hasFilters = state.activeId !== DECKCHECK_ID && state.activeId !== DAMAGECALC_ID;
+  const isCollectionView = state.activeId !== INVENTORY_ID && state.activeId !== DECKCHECK_ID && !DAMAGECALC_IDS.includes(state.activeId);
+  const isToolsView = state.activeId === DECKCHECK_ID || DAMAGECALC_IDS.includes(state.activeId);
+  // Ni el Comprobador de Mazos ni las Calculadoras de Daño tienen búsqueda
+  // ni chips que filtrar, así que el botón "Filtro" no tiene sentido en
+  // esas vistas: se oculta en vez de abrir un panel vacío.
+  const hasFilters = state.activeId !== DECKCHECK_ID && !DAMAGECALC_IDS.includes(state.activeId);
 
   let panelHtml = "";
   if(open === "colecciones" && isAdmin){
@@ -495,10 +511,18 @@ function buildMobileNavHtml(){
               <span class="sidebar-name-title">Comprobador de Mazos</span>
             </span>
           </div>
-          <div class="mobile-sheet-item ${state.activeId === DAMAGECALC_ID ? "active" : ""}" data-collection="${DAMAGECALC_ID}">
+          <div class="mobile-sheet-item ${state.activeId === DAMAGECALC_MEGANIUM_ID ? "active" : ""}" data-collection="${DAMAGECALC_MEGANIUM_ID}">
             <i class="ti ti-bolt" aria-hidden="true"></i>
-            <span class="sidebar-name">
+            <span class="sidebar-name sidebar-name-inline-on-mobile">
               <span class="sidebar-name-title">Calculadora de Daño</span>
+              <span class="sidebar-name-abbr">[Ogerpon &amp; Mega-Meganium]</span>
+            </span>
+          </div>
+          <div class="mobile-sheet-item ${state.activeId === DAMAGECALC_CHANDELURE_ID ? "active" : ""}" data-collection="${DAMAGECALC_CHANDELURE_ID}">
+            <i class="ti ti-bolt" aria-hidden="true"></i>
+            <span class="sidebar-name sidebar-name-inline-on-mobile">
+              <span class="sidebar-name-title">Calculadora de Daño</span>
+              <span class="sidebar-name-abbr">[Chandelure &amp; Mega-Chandelure]</span>
             </span>
           </div>
           ${buildThemeToggleHtml()}
@@ -645,8 +669,13 @@ function render(){
     return;
   }
 
-  if(state.activeId === DAMAGECALC_ID){
-    renderDamageCalc(sidebarHtml);
+  if(state.activeId === DAMAGECALC_MEGANIUM_ID){
+    renderDamageCalcMeganium(sidebarHtml);
+    return;
+  }
+
+  if(state.activeId === DAMAGECALC_CHANDELURE_ID){
+    renderDamageCalcChandelure(sidebarHtml);
     return;
   }
 
@@ -1045,17 +1074,19 @@ function renderDeckChecker(sidebarHtml){
   attachEvents();
 }
 
-// Contador +/- de energías de la Calculadora de Daño: mismo lenguaje visual
-// que las variant-badge de las colecciones, pero acotado entre 0 y 10 (ver
-// los listeners de [data-energy-action] en attachEvents).
-function buildEnergyCounterHtml(label, value, target){
+// Contador +/- reutilizado por todas las Calculadoras de Daño: mismo
+// lenguaje visual que las variant-badge de las colecciones. `pairId` y
+// `field` identifican qué hueco de `state.damageCalc` hay que mutar (ver
+// los listeners de [data-energy-action] en attachEvents) y `max` el tope
+// superior de esa variable en concreto (cada pareja/campo tiene el suyo).
+function buildEnergyCounterHtml(label, value, pairId, field, max = 10){
   return `
     <div class="energy-counter">
       <span class="energy-counter-label">${escapeHtml(label)}</span>
       <div class="energy-counter-controls">
-        <button type="button" class="energy-btn" data-energy-action="dec" data-energy-target="${target}" ${value <= 0 ? "disabled" : ""}>−</button>
+        <button type="button" class="energy-btn" data-energy-action="dec" data-energy-pair="${pairId}" data-energy-field="${field}" data-energy-max="${max}" ${value <= 0 ? "disabled" : ""}>−</button>
         <span class="energy-counter-value">${value}</span>
-        <button type="button" class="energy-btn" data-energy-action="inc" data-energy-target="${target}" ${value >= 10 ? "disabled" : ""}>+</button>
+        <button type="button" class="energy-btn" data-energy-action="inc" data-energy-pair="${pairId}" data-energy-field="${field}" data-energy-max="${max}" ${value >= max ? "disabled" : ""}>+</button>
       </div>
     </div>`;
 }
@@ -1088,8 +1119,8 @@ function buildDamageNeededHtml(isOgerpon, rivalHp, needed){
   return `<div class="damage-needed"><p>${describe(needed.extraMine, "energía(s) propia(s)")}</p></div>`;
 }
 
-function renderDamageCalc(sidebarHtml){
-  const dc = state.damageCalc;
+function renderDamageCalcMeganium(sidebarHtml){
+  const dc = state.damageCalc[DAMAGECALC_MEGANIUM_ID];
   const isOgerpon = dc.attacker === "ogerpon";
   const userInfoHtml = buildUserPanelHtml();
 
@@ -1098,35 +1129,42 @@ function renderDamageCalc(sidebarHtml){
 
   const attackerCardsHtml = `
     <div class="damage-attackers">
-      <div class="damage-attacker-card ${isOgerpon ? "active" : ""}" data-attacker="ogerpon">
+      <div class="damage-attacker-card ${isOgerpon ? "active" : ""}" data-attacker-pair="${DAMAGECALC_MEGANIUM_ID}" data-attacker="ogerpon">
         <img src="assets/damagecalc/ogerpon-turquesa-ex.png" alt="Ogerpon Máscara Turquesa ex" loading="lazy">
       </div>
-      <div class="damage-attacker-card ${!isOgerpon ? "active" : ""}" data-attacker="megameganium">
+      <div class="damage-attacker-card ${!isOgerpon ? "active" : ""}" data-attacker-pair="${DAMAGECALC_MEGANIUM_ID}" data-attacker="megameganium">
         <img src="assets/damagecalc/mega-meganium.png" alt="Mega Meganium" loading="lazy">
       </div>
     </div>`;
 
+  const meganiumBenchToggleHtml = `
+        <button type="button" class="damage-toggle ${dc.meganiumBench ? "active" : ""}" data-damage-toggle-pair="${DAMAGECALC_MEGANIUM_ID}" data-damage-toggle-field="meganiumBench">
+          <i class="ti ti-shield-check" aria-hidden="true"></i> Meganium en banca (energías propias x2)
+        </button>`;
+  const typeAdvantageToggleHtml = `
+        <button type="button" class="damage-toggle ${dc.typeAdvantage ? "active" : ""}" data-damage-toggle-pair="${DAMAGECALC_MEGANIUM_ID}" data-damage-toggle-field="typeAdvantage">
+          <i class="ti ti-swords" aria-hidden="true"></i> Ventaja de tipo (x2)
+        </button>`;
+
   const controlsHtml = isOgerpon ? `
     <div class="damage-controls">
       <div class="damage-energy-row">
-        ${buildEnergyCounterHtml("Energías propias", dc.myEnergy, "my")}
-        ${buildEnergyCounterHtml("Energías del rival", dc.rivalEnergy, "rival")}
+        ${buildEnergyCounterHtml("Energías propias", dc.myEnergy, DAMAGECALC_MEGANIUM_ID, "myEnergy", 10)}
+        ${buildEnergyCounterHtml("Energías del rival", dc.rivalEnergy, DAMAGECALC_MEGANIUM_ID, "rivalEnergy", 10)}
       </div>
       <div class="damage-toggles">
-        <button type="button" class="damage-toggle ${dc.meganiumBench ? "active" : ""}" data-damage-toggle="meganiumBench">
-          <i class="ti ti-shield-check" aria-hidden="true"></i> Meganium en banca (energías propias x2)
-        </button>
-        <button type="button" class="damage-toggle ${dc.typeAdvantage ? "active" : ""}" data-damage-toggle="typeAdvantage">
-          <i class="ti ti-swords" aria-hidden="true"></i> Ventaja de tipo (x2)
-        </button>
+        ${meganiumBenchToggleHtml}
+        ${typeAdvantageToggleHtml}
       </div>
     </div>` : `
     <div class="damage-controls">
-      ${buildEnergyCounterHtml("Energías propias", dc.myEnergy, "my")}
+      <div class="damage-energy-row">
+        <div class="energy-counter-spacer" aria-hidden="true"></div>
+        ${buildEnergyCounterHtml("Energías propias", dc.myEnergy, DAMAGECALC_MEGANIUM_ID, "myEnergy", 10)}
+      </div>
       <div class="damage-toggles">
-        <button type="button" class="damage-toggle ${dc.typeAdvantage ? "active" : ""}" data-damage-toggle="typeAdvantage">
-          <i class="ti ti-swords" aria-hidden="true"></i> Ventaja de tipo (x2)
-        </button>
+        ${meganiumBenchToggleHtml}
+        ${typeAdvantageToggleHtml}
       </div>
     </div>`;
 
@@ -1159,6 +1197,87 @@ function renderDamageCalc(sidebarHtml){
       <div class="damage-result">
         <div class="damage-result-total">${damage}<span class="lbl">Daño total</span></div>
         ${neededHtml}
+      </div>
+
+    </div>
+    </div>
+  </div>`;
+
+  attachEvents();
+}
+
+function renderDamageCalcChandelure(sidebarHtml){
+  const dc = state.damageCalc[DAMAGECALC_CHANDELURE_ID];
+  const isChandelure = dc.attacker === "chandelure";
+  const userInfoHtml = buildUserPanelHtml();
+
+  const damage = isChandelure ? chandelureDamage(dc) : megaChandelureDamage(dc);
+  const totalRetreat = isChandelure ? null : megaChandelureRetreatCost(dc);
+
+  const attackerCardsHtml = `
+    <div class="damage-attackers">
+      <div class="damage-attacker-card ${isChandelure ? "active" : ""}" data-attacker-pair="${DAMAGECALC_CHANDELURE_ID}" data-attacker="chandelure">
+        <img src="assets/damagecalc/chandelure.png" alt="Chandelure" loading="lazy">
+      </div>
+      <div class="damage-attacker-card ${!isChandelure ? "active" : ""}" data-attacker-pair="${DAMAGECALC_CHANDELURE_ID}" data-attacker="megachandelure">
+        <img src="assets/damagecalc/mega-chandelure.png" alt="Mega Chandelure" loading="lazy">
+      </div>
+    </div>`;
+
+  const typeAdvantageToggleHtml = `
+        <button type="button" class="damage-toggle ${dc.typeAdvantage ? "active" : ""}" data-damage-toggle-pair="${DAMAGECALC_CHANDELURE_ID}" data-damage-toggle-field="typeAdvantage">
+          <i class="ti ti-swords" aria-hidden="true"></i> Ventaja de tipo (x2)
+        </button>`;
+
+  const controlsHtml = isChandelure ? `
+    <div class="damage-controls">
+      <div class="damage-energy-row">
+        ${buildEnergyCounterHtml("Cartas en mano del rival", dc.rivalHandCards, DAMAGECALC_CHANDELURE_ID, "rivalHandCards", 60)}
+      </div>
+      <div class="damage-toggles">
+        ${typeAdvantageToggleHtml}
+      </div>
+    </div>` : `
+    <div class="damage-controls">
+      <div class="damage-energy-row">
+        ${buildEnergyCounterHtml("Mega Chandelure en banca", dc.megaCount, DAMAGECALC_CHANDELURE_ID, "megaCount", 3)}
+        ${buildEnergyCounterHtml("Coste de retirada del rival", dc.retreatCost, DAMAGECALC_CHANDELURE_ID, "retreatCost", 5)}
+      </div>
+      <div class="damage-toggles">
+        <button type="button" class="damage-toggle ${dc.airBalloon ? "active" : ""}" data-damage-toggle-pair="${DAMAGECALC_CHANDELURE_ID}" data-damage-toggle-field="airBalloon">
+          <i class="ti ti-wind" aria-hidden="true"></i> Globo Helio del rival (−2 al coste de retirada)
+        </button>
+        ${typeAdvantageToggleHtml}
+      </div>
+    </div>`;
+
+  const resultExtraHtml = isChandelure ? "" : `
+      <div class="damage-needed">
+        <p>Coste de retirada total del rival: <strong>${totalRetreat}</strong></p>
+      </div>`;
+
+  root.innerHTML = `
+  <div class="shell">
+    ${sidebarHtml}
+    <div class="main">
+    <div class="wrap">
+
+      ${userInfoHtml}
+
+      <div class="header">
+        <div class="title-block">
+          <div class="eyebrow">Calcula antes de atacar</div>
+          <h1>Calculadora de <span style="color:var(--estadio)">Daño</span></h1>
+        </div>
+      </div>
+
+      ${attackerCardsHtml}
+
+      ${controlsHtml}
+
+      <div class="damage-result">
+        <div class="damage-result-total">${damage}<span class="lbl">Daño total</span></div>
+        ${resultExtraHtml}
       </div>
 
     </div>
@@ -1460,35 +1579,41 @@ function attachEvents(){
     });
   });
 
-  // ---- Calculadora de Daño ----
+  // ---- Calculadoras de Daño ----
+  // Genéricos y parametrizados por pareja (data-*-pair) para que añadir una
+  // pareja nueva en el futuro no requiera tocar estos listeners.
   document.querySelectorAll(".damage-attacker-card[data-attacker]").forEach(card => {
     card.addEventListener("click", () => {
-      state.damageCalc.attacker = card.dataset.attacker;
+      state.damageCalc[card.dataset.attackerPair].attacker = card.dataset.attacker;
       render();
     });
   });
 
   document.querySelectorAll("[data-energy-action]").forEach(btn => {
     btn.addEventListener("click", () => {
-      const key = btn.dataset.energyTarget === "rival" ? "rivalEnergy" : "myEnergy";
+      const pairState = state.damageCalc[btn.dataset.energyPair];
+      const field = btn.dataset.energyField;
+      const max = Number(btn.dataset.energyMax);
       const delta = btn.dataset.energyAction === "inc" ? 1 : -1;
-      state.damageCalc[key] = Math.min(10, Math.max(0, state.damageCalc[key] + delta));
+      pairState[field] = Math.min(max, Math.max(0, pairState[field] + delta));
       render();
     });
   });
 
-  document.querySelectorAll("[data-damage-toggle]").forEach(btn => {
+  document.querySelectorAll("[data-damage-toggle-field]").forEach(btn => {
     btn.addEventListener("click", () => {
-      const key = btn.dataset.damageToggle;
-      state.damageCalc[key] = !state.damageCalc[key];
+      const pairState = state.damageCalc[btn.dataset.damageTogglePair];
+      const field = btn.dataset.damageToggleField;
+      pairState[field] = !pairState[field];
       render();
     });
   });
 
+  // Solo la pareja Ogerpon/Mega Meganium tiene campo de PS del rival.
   const rivalHpInput = document.getElementById("rivalHpInput");
   if(rivalHpInput){
     rivalHpInput.addEventListener("input", (e) => {
-      state.damageCalc.rivalHp = e.target.value.replace(/[^0-9]/g, "");
+      state.damageCalc[DAMAGECALC_MEGANIUM_ID].rivalHp = e.target.value.replace(/[^0-9]/g, "");
       const pos = e.target.selectionStart;
       render();
       const el = document.getElementById("rivalHpInput");

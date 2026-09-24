@@ -419,6 +419,16 @@
     .mobile-sheet-item.disabled{opacity:.5;}
     .mobile-sheet-item i{flex-shrink:0;}
     .mobile-sheet-item i{font-size:15px; width:15px; text-align:center;}
+    /* Solo en el panel móvil el título y el "[Ogerpon & Mega-Meganium]" van
+       en la misma línea; en el sidebar de escritorio .sidebar-name sigue
+       siendo columna (título arriba, subtítulo debajo), igual que en las
+       colecciones. */
+    .mobile-sheet-item .sidebar-name-inline-on-mobile{
+      flex-direction:row;
+      align-items:baseline;
+      gap:6px;
+      flex-wrap:wrap;
+    }
 
     /* Variante roja del panel, para "Colecciones" y "Herramientas" (la
        versión móvil del sidebar): mismo .mobile-sheet de base, pero con
@@ -1368,16 +1378,25 @@
   }
   .damage-controls{
     display:flex;
-    flex-wrap:wrap;
+    flex-direction:column;
     gap:12px;
-    align-items:stretch;
     margin-bottom:16px;
   }
 
+  /* Mismo ancho (150px) y mismo gap (14px) que .damage-attackers, para que
+     cada recuadro de energía quede alineado justo debajo de una carta. */
   .damage-energy-row{
     display:flex;
     flex-wrap:wrap;
-    gap:12px;
+    gap:14px;
+  }
+
+  /* Hueco invisible del ancho de una carta: se usa cuando solo hay un
+     recuadro de energía (Mega Meganium), para que ese recuadro quede
+     alineado bajo su propia carta (la segunda) en vez de bajo la primera. */
+  .energy-counter-spacer{
+    width:150px;
+    flex-shrink:0;
   }
 
   .energy-counter{
@@ -1389,8 +1408,8 @@
     background:var(--bg-panel);
     border:1px solid var(--line);
     border-radius:10px;
-    min-width:150px;
-    flex:1;
+    width:150px;
+    flex-shrink:0;
     text-align:center;
   }
   .energy-counter-label{
@@ -1428,16 +1447,20 @@
     text-align:center;
   }
 
+  /* Fila de interruptores: ocupa todo el ancho disponible (a diferencia de
+     los recuadros de energía, que se limitan al ancho de una carta). */
   .damage-toggles{
     display:flex;
     flex-direction:column;
     gap:8px;
-    justify-content:center;
+    width:100%;
   }
   .damage-toggle{
     display:flex;
     align-items:center;
     gap:8px;
+    width:100%;
+    box-sizing:border-box;
     padding:9px 14px;
     background:var(--bg-panel);
     border:1px solid var(--line);
