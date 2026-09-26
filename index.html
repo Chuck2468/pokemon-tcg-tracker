@@ -7,15 +7,45 @@
     <title>Pokémon TCG Tracker</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
+
+    <!-- El CSS de iconos venía de un CDN externo (~cientos de KB entre CSS
+         y fuente) y, al ser un <link rel="stylesheet"> normal, bloqueaba el
+         primer pintado de TODA la página hasta que terminaba de llegar. Con
+         preconnect (adelanta la conexión al CDN) + el truco "media=print,
+         onload=all" (lo carga en segundo plano y lo activa al terminar), la
+         app ya pinta el spinner de carga sin esperar a los iconos; estos
+         aparecen un instante después, en vez de retrasar todo lo demás. -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css"></noscript>
 
     <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
     <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <link rel="manifest" href="manifest.json">
+
+    <!-- app.js importa estos módulos propios en cadena (import tras import).
+         Sin esto, el navegador los va descubriendo y pidiendo uno detrás de
+         otro según los va leyendo dentro de app.js. Con modulepreload los
+         pide todos a la vez desde el principio, en paralelo, así el primer
+         render (el spinner "Cargando…") sale antes. Si en el futuro app.js
+         importa un módulo nuevo, añádelo aquí también para que siga
+         beneficiándose de la carga en paralelo. -->
+    <link rel="modulepreload" href="js/auth.js">
+    <link rel="modulepreload" href="js/cardRepository.js">
+    <link rel="modulepreload" href="js/constants.js">
+    <link rel="modulepreload" href="js/data/collections.js">
+    <link rel="modulepreload" href="js/userRepository.js">
+    <link rel="modulepreload" href="js/state.js">
+    <link rel="modulepreload" href="js/cardUtils.js">
+    <link rel="modulepreload" href="js/imageModal.js">
+    <link rel="modulepreload" href="js/collectionsService.js">
+    <link rel="modulepreload" href="js/deckChecker.js">
+    <link rel="modulepreload" href="js/damageCalc.js">
+    <link rel="modulepreload" href="js/theme.js">
 </head>
 <body>
 <div id="root"></div>
-<script type="module" src="js/app.js"></script>
+<script type="module" src="js/app.js" fetchpriority="high"></script>
 </body>
 </html>

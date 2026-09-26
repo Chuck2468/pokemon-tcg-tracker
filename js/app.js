@@ -176,6 +176,10 @@ auth.onAuthChange((_event, session) => {
 auth.getSession().then(handleSession);
 
 const root = document.getElementById("root");
+// Primer pintado: hasta este punto la página estaba completamente en
+// blanco. Sale al instante (no depende de red), y se sustituye en cuanto
+// handleSession()/startApp() tengan algo real que mostrar.
+renderLoading();
 
 async function loadCollection(id) {
   await loadCollectionData(id);
@@ -575,6 +579,19 @@ function buildMobileNavHtml(){
         </button>` : ""}
       </nav>
     </div>`;
+}
+
+function renderLoading() {
+  root.innerHTML = `
+    <div class="shell">
+      <div class="main">
+        <div class="wrap loading-wrap">
+          <div class="loading-spinner" aria-hidden="true"></div>
+          <p class="loading-text">Cargando…</p>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function renderLogin() {
@@ -1686,6 +1703,12 @@ async function startApp() {
       render();
     }
     return;
+  }
+  // Antes de esto, si la colección aún no estaba en caché, la pantalla se
+  // quedaba en blanco (renderLoading de arriba) hasta que Supabase
+  // respondía. Ahora se ve "Cargando…" en vez de nada.
+  if(state.cache[state.activeId] === undefined){
+    renderLoading();
   }
   await loadCollection(state.activeId);
 }
