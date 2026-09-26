@@ -114,6 +114,12 @@ export function filteredCards(){
   if(state.activeType !== "ALL"){
     list = list.filter(c => c.tipo === state.activeType);
   }
+  // El tipo elemental (card.energia) solo tiene sentido para cartas
+  // Pokémon: en cualquier otra categoría (o cuando la categoría es "todas")
+  // las demás cartas pasan el filtro sin más, tal cual pide el diseño.
+  if(state.activePokeType !== "ALL"){
+    list = list.filter(c => c.tipo !== "Pokémon" || c.energia === state.activePokeType);
+  }
   if(state.search.trim()){
     const q = state.search.trim().toLowerCase();
     list = list.filter(c =>

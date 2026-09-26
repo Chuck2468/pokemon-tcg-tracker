@@ -23,6 +23,32 @@
     --energia:#e8b93d;
     --energia-soft:#e8b93d22;
 
+    /* Tipos elementales Pokémon (filtro "Tipo" nuevo, campo card.energia).
+       Independientes de --energia de arriba, que es la categoría de carta
+       "Energía" (Pokémon/Objeto/.../Energía), no un tipo elemental. */
+    --etype-planta:#34d399;
+    --etype-planta-soft:#34d39922;
+    --etype-fuego:#fb7185;
+    --etype-fuego-soft:#fb718522;
+    --etype-agua:#38bdf8;
+    --etype-agua-soft:#38bdf822;
+    --etype-electrico:#eab308;
+    --etype-electrico-soft:#eab30822;
+    --etype-psiquico:#d946ef;
+    --etype-psiquico-soft:#d946ef22;
+    --etype-lucha:#c2410c;
+    --etype-lucha-soft:#c2410c22;
+    --etype-siniestro:#52525b;
+    --etype-siniestro-soft:#52525b22;
+    --etype-acero:#94a3b8;
+    --etype-acero-soft:#94a3b822;
+    --etype-hada:#f9a8d4;
+    --etype-hada-soft:#f9a8d422;
+    --etype-dragon:#6366f1;
+    --etype-dragon-soft:#6366f122;
+    --etype-normal:#a8a29e;
+    --etype-normal-soft:#a8a29e22;
+
     --v-normal:#aab0c2;
     --v-reverse:#aab0c2;
     --v-holo:#aab0c2;
@@ -79,6 +105,29 @@
     --partidario-soft:#dc26261f;
     --energia:#ca8a04;
     --energia-soft:#ca8a041f;
+
+    --etype-planta:#059669;
+    --etype-planta-soft:#0596691f;
+    --etype-fuego:#e11d48;
+    --etype-fuego-soft:#e11d481f;
+    --etype-agua:#0284c7;
+    --etype-agua-soft:#0284c71f;
+    --etype-electrico:#a16207;
+    --etype-electrico-soft:#a162071f;
+    --etype-psiquico:#a21caf;
+    --etype-psiquico-soft:#a21caf1f;
+    --etype-lucha:#9a3412;
+    --etype-lucha-soft:#9a34121f;
+    --etype-siniestro:#3f3f46;
+    --etype-siniestro-soft:#3f3f461f;
+    --etype-acero:#475569;
+    --etype-acero-soft:#4755691f;
+    --etype-hada:#db2777;
+    --etype-hada-soft:#db27771f;
+    --etype-dragon:#4338ca;
+    --etype-dragon-soft:#4338ca1f;
+    --etype-normal:#78716c;
+    --etype-normal-soft:#78716c1f;
 
     --v-normal:#848da3;
     --v-reverse:#848da3;
@@ -430,11 +479,10 @@
       flex-wrap:wrap;
     }
 
-    /* Variante roja del panel, para "Colecciones" y "Herramientas" (la
-       versión móvil del sidebar): mismo .mobile-sheet de base, pero con
-       las variables del menú en vez de las del panel neutro. El panel
-       "Filtro" NO lleva esta clase, así que los chips de colores siguen
-       sobre superficie clara donde se leen mejor. */
+    /* Variante roja del panel, para "Colecciones", "Herramientas" y
+       "Filtro" (la versión móvil del sidebar y su panel de filtros): mismo
+       .mobile-sheet de base, pero con las variables del menú en vez de las
+       del panel neutro. */
     .mobile-sheet-nav{
       background:var(--sidebar-bg);
       border-top-color:var(--sidebar-line);
@@ -507,9 +555,13 @@
       color:var(--ink-dim);
     }
 
-    /* Panel "Filtro": cada bloque de chips (Tipo/Estado/Variante) va bajo
-       su propia etiqueta, en vez de amontonar todos los chips seguidos sin
-       distinción de a qué filtro pertenece cada uno. */
+    /* El panel "Filtro" ahora comparte formato con "Colecciones" y
+       "Herramientas" (mobile-sheet-nav + hero con título y cierre), así que
+       hereda su misma paleta roja de cabecera / blanca de scroll (ver las
+       reglas de arriba). Lo que sigue son los ajustes propios de Filtro:
+       cada bloque de chips (Categoría/Tipo/Estado/Variante) bajo su
+       etiqueta, y los chips repartidos en una rejilla de 3 columnas para
+       que ninguna fila quede más ancha o más estrecha que las demás. */
     .mobile-sheet-filters .filter-group{margin-bottom:14px;}
     .mobile-sheet-filters .filter-group:last-child{margin-bottom:0;}
     .filter-group-label{
@@ -520,7 +572,23 @@
       letter-spacing:.06em;
       margin-bottom:6px;
     }
-    .mobile-sheet-filters .chips{margin-bottom:0;}
+    .mobile-sheet-nav .filter-group-label{color:var(--sidebar-muted);}
+    :root[data-theme="light"] .mobile-sheet-has-hero .mobile-sheet-scroll .filter-group-label{
+      color:var(--muted);
+    }
+    .mobile-sheet-filters .chips{
+      display:grid;
+      grid-template-columns:repeat(3, 1fr);
+      gap:8px;
+      margin-bottom:0;
+    }
+    .mobile-sheet-filters .chip{
+      text-align:center;
+      padding:8px 4px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
   }
 
   .wrap{max-width:920px;margin:0 auto;}

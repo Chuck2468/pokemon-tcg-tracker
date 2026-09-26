@@ -20,7 +20,10 @@ export const state = {
   activeId: COLLECTIONS[0].id,
   cache: {},           // collectionId -> array de cartas, o undefined si no está cargada aún
   search: "",
-  activeType: "ALL",
+  activeType: "ALL",       // Categoría de carta: ALL o uno de TYPES (constants.js)
+  activePokeType: "ALL",   // Tipo elemental Pokémon: ALL o uno de ENERGY_TYPES (constants.js).
+                           // Solo afecta a cartas con tipo (categoría) "Pokémon"; en el resto
+                           // de categorías se muestra pero no filtra nada (ver filteredCards).
   activeStatus: "ALL",
   onlyFullArt: false,  // filtro exclusivo del Inventario
   saveError: false,

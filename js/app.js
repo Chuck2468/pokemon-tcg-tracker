@@ -1,6 +1,6 @@
 import { auth } from "./auth.js";
 import { storage } from "./cardRepository.js";
-import { TYPE_COLORS,TYPE_SOFT,TYPES,VARIANTS } from "./constants.js";
+import { TYPE_COLORS,TYPE_SOFT,TYPES,VARIANTS,ENERGY_TYPES,ENERGY_TYPE_COLORS } from "./constants.js";
 import { COLLECTIONS } from "./data/collections.js";
 import { userRepository } from "./userRepository.js";
 import { state, INVENTORY_ID, DECKCHECK_ID, DAMAGECALC_MEGANIUM_ID, DAMAGECALC_CHANDELURE_ID, DAMAGECALC_IDS } from "./state.js";
@@ -400,30 +400,37 @@ function buildSidebarHtml(){
 function buildMobileFilterSheetHtml(){
   const isInventory = state.activeId === INVENTORY_ID;
 
-  const typeChipsHtml = ["ALL", ...TYPES].map(t => {
-    const label = t === "ALL" ? "Todos los tipos" : t;
-    const active = state.activeType === t;
-    const color = t === "ALL" ? "var(--ink)" : TYPE_COLORS[t];
-    return `<div class="chip ${active ? "active" : ""} ${t === "ALL" ? "chip-neutral" : ""}" data-type="${t}"
-      style="${active ? `background:${color};` : ""}">${escapeHtml(label)}</div>`;
-  }).join("");
-
-  const typeGroupHtml = `
+  const categoryGroupHtml = `
     <div class="filter-group">
-      <div class="filter-group-label">Tipo</div>
-      <div class="chips">${typeChipsHtml}</div>
+      <div class="filter-group-label">Categoría</div>
+      <div class="chips">${["ALL", ...TYPES].map(t => {
+        const label = t === "ALL" ? "Todos" : t;
+        const active = state.activeType === t;
+        const color = t === "ALL" ? "var(--ink)" : TYPE_COLORS[t];
+        return `<div class="chip ${active ? "active" : ""} ${t === "ALL" ? "chip-neutral" : ""}" data-type="${t}"
+          style="${active ? `background:${color};` : ""}">${escapeHtml(label)}</div>`;
+      }).join("")}</div>
     </div>`;
 
-  const extraGroupHtml = isInventory
-    ? `
+  // Siempre visible, en las dos vistas: solo tiene efecto sobre cartas de
+  // categoría "Pokémon" (ver buildEnergyTypeChipsHtml / filteredCards), pero
+  // el chip está disponible aunque la categoría activa sea otra.
+  const poketypeGroupHtml = `
+    <div class="filter-group">
+      <div class="filter-group-label">Tipo</div>
+      <div class="chips">${buildEnergyTypeChipsHtml()}</div>
+    </div>`;
+
+  const variantGroupHtml = `
     <div class="filter-group">
       <div class="filter-group-label">Variante</div>
       <div class="chips">
         <div class="chip ${state.onlyFullArt ? "active" : ""}" id="fullArtToggleMobile"
           style="${state.onlyFullArt ? `background:var(--v-fullart);` : ""}">Solo FullArt</div>
       </div>
-    </div>`
-    : `
+    </div>`;
+
+  const statusGroupHtml = `
     <div class="filter-group">
       <div class="filter-group-label">Estado</div>
       <div class="chips">
@@ -437,14 +444,23 @@ function buildMobileFilterSheetHtml(){
       </div>
     </div>`;
 
-  // En Inventario el orden habitual es Tipo → FullArt; en una colección es
-  // Estado → Tipo (igual que en sus respectivos toolbars).
-  const groupsHtml = isInventory ? `${typeGroupHtml}${extraGroupHtml}` : `${extraGroupHtml}${typeGroupHtml}`;
+  // Inventario: Categoría → Tipo → Variante. Colección: Estado → Categoría
+  // → Tipo (igual que en sus respectivos toolbars de escritorio).
+  const groupsHtml = isInventory
+    ? `${categoryGroupHtml}${poketypeGroupHtml}${variantGroupHtml}`
+    : `${statusGroupHtml}${categoryGroupHtml}${poketypeGroupHtml}`;
 
   return `
-    <div class="mobile-sheet mobile-sheet-filters">
-      <div class="mobile-sheet-title">Filtros · ${isInventory ? "Inventario" : "Colección"}</div>
-      ${groupsHtml}
+    <div class="mobile-sheet mobile-sheet-nav mobile-sheet-has-hero mobile-sheet-filters">
+      <div class="mobile-sheet-hero">
+        <div class="mobile-sheet-hero-title">Filtros · ${isInventory ? "Inventario" : "Colección"}</div>
+        <button type="button" class="mobile-sheet-close" data-mobile-close="1" aria-label="Cerrar">
+          <i class="ti ti-x" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="mobile-sheet-scroll">
+        ${groupsHtml}
+      </div>
     </div>`;
 }
 
@@ -656,6 +672,21 @@ function buildSyncActionsHtml(collectionId){
     </div>`;
 }
 
+// Chips del filtro de tipo elemental Pokémon (card.energia), compartidos
+// por las 3 vistas de escritorio (colección, Inventario, BSP) y por el
+// panel de Filtro móvil. Siempre se muestran, aunque solo tengan efecto
+// sobre cartas de categoría "Pokémon" (ver filteredCards en
+// collectionsService.js y el filtrado inline de Inventario/BSP más abajo).
+function buildEnergyTypeChipsHtml(){
+  return ["ALL", ...ENERGY_TYPES].map(t => {
+    const label = t === "ALL" ? "Todos" : t;
+    const active = state.activePokeType === t;
+    const color = t === "ALL" ? "var(--ink)" : ENERGY_TYPE_COLORS[t];
+    return `<div class="chip ${active ? "active" : ""} ${t === "ALL" ? "chip-neutral" : ""}" data-poketype="${t}"
+      style="${active ? `background:${color};` : ""}">${escapeHtml(label)}</div>`;
+  }).join("");
+}
+
 function render(){
   const sidebarHtml = buildSidebarHtml() + buildMobileNavHtml();
 
@@ -715,7 +746,7 @@ function render(){
   }).join("");
 
   const typeChipsHtml = ["ALL", ...TYPES].map(t => {
-    const label = t === "ALL" ? "Todos los tipos" : t;
+    const label = t === "ALL" ? "Todos" : t;
     const active = state.activeType === t;
     const color = t === "ALL" ? "var(--ink)" : TYPE_COLORS[t];
     return `<div class="chip ${active ? "active" : ""} ${t === "ALL" ? "chip-neutral" : ""}" data-type="${t}"
@@ -791,6 +822,7 @@ function render(){
 
       <div class="chips">${statusChipsHtml}</div>
       <div class="chips">${typeChipsHtml}</div>
+      <div class="chips">${buildEnergyTypeChipsHtml()}</div>
 
       <div class="list">${rowsHtml}</div>
 
@@ -815,7 +847,7 @@ function renderInventory(sidebarHtml){
   const userInfoHtml = buildUserPanelHtml();
 
   const typeChipsHtml = ["ALL", ...TYPES].map(t => {
-    const label = t === "ALL" ? "Todos los tipos" : t;
+    const label = t === "ALL" ? "Todos" : t;
     const active = state.activeType === t;
     const color = t === "ALL" ? "var(--ink)" : TYPE_COLORS[t];
     return `<div class="chip ${active ? "active" : ""} ${t === "ALL" ? "chip-neutral" : ""}" data-type="${t}"
@@ -831,6 +863,9 @@ function renderInventory(sidebarHtml){
     let cards = (state.cache[meta.id] || []).filter(card => cardTotal(card) > 0);
     if(state.activeType !== "ALL"){
       cards = cards.filter(card => card.tipo === state.activeType);
+    }
+    if(state.activePokeType !== "ALL"){
+      cards = cards.filter(card => card.tipo !== "Pokémon" || card.energia === state.activePokeType);
     }
     if(state.onlyFullArt){
       cards = cards.filter(card => (card.variantes.fullart || 0) > 0);
@@ -913,6 +948,7 @@ function renderInventory(sidebarHtml){
       </div>
 
       <div class="chips">${typeChipsHtml}</div>
+      <div class="chips">${buildEnergyTypeChipsHtml()}</div>
       <div class="chips">${fullArtChipHtml}</div>
 
       ${groupsHtml}
@@ -1319,7 +1355,7 @@ function renderBsp(sidebarHtml, meta){
   }).join("");
 
   const typeChipsHtml = ["ALL", ...TYPES].map(t => {
-    const label = t === "ALL" ? "Todos los tipos" : t;
+    const label = t === "ALL" ? "Todos" : t;
     const active = state.activeType === t;
     const color = t === "ALL" ? "var(--ink)" : TYPE_COLORS[t];
     return `<div class="chip ${active ? "active" : ""} ${t === "ALL" ? "chip-neutral" : ""}" data-type="${t}"
@@ -1335,6 +1371,9 @@ function renderBsp(sidebarHtml, meta){
     }
     if(state.activeType !== "ALL"){
       cards = cards.filter(c => c.tipo === state.activeType);
+    }
+    if(state.activePokeType !== "ALL"){
+      cards = cards.filter(c => c.tipo !== "Pokémon" || c.energia === state.activePokeType);
     }
     if(q){
       cards = cards.filter(c =>
@@ -1418,6 +1457,7 @@ function renderBsp(sidebarHtml, meta){
 
       <div class="chips">${statusChipsHtml}</div>
       <div class="chips">${typeChipsHtml}</div>
+      <div class="chips">${buildEnergyTypeChipsHtml()}</div>
 
       ${groupsHtml}
 
@@ -1531,6 +1571,20 @@ function attachEvents(){
   document.querySelectorAll(".chip[data-type]").forEach(chip => {
     chip.addEventListener("click", () => {
       state.activeType = chip.dataset.type;
+      render();
+    });
+  });
+
+  document.querySelectorAll(".chip[data-poketype]").forEach(chip => {
+    chip.addEventListener("click", () => {
+      state.activePokeType = chip.dataset.poketype;
+      // Al marcar un tipo elemental concreto, forzamos la categoría a
+      // "Pokémon": si no, Objeto/Partidario/etc. seguían apareciendo en la
+      // lista (el filtro de tipo no les afecta a propósito), dando la
+      // sensación de que el filtro "no funcionaba" del todo.
+      if(state.activePokeType !== "ALL"){
+        state.activeType = "Pokémon";
+      }
       render();
     });
   });
