@@ -3,8 +3,14 @@
 // cada render), para no perder su estado ni tener que re-engancharle
 // listeners cada vez que se redibuja la app.
 
-function buildImageUrl(series, set, cardId){
-  return `https://assets.tcgdex.net/es/${series}/${set}/${cardId}/high.webp`;
+// Mismo esquema de carpetas que tcgdex (series/set/cardId/high.webp); lo
+// único que cambia es la raíz, según localImages en la colección (ver
+// data/collections.js): true para colecciones sin cobertura completa en
+// tcgdex (las promo MEP/SVP), donde las imágenes viven en assets/cards/
+// siguiendo esa misma estructura.
+function buildImageUrl(series, set, cardId, isLocal){
+  const base = isLocal ? "assets/cards" : "https://assets.tcgdex.net/es";
+  return `${base}/${series}/${set}/${cardId}/high.webp`;
 }
 
 let imageModalEl = null;
@@ -32,10 +38,10 @@ function ensureImageModal(){
   return modal;
 }
 
-export function openCardImage(series, set, cardId){
+export function openCardImage(series, set, cardId, isLocal){
   const modal = ensureImageModal();
   const img = modal.querySelector("#cardImageModalImg");
-  img.src = buildImageUrl(series, set, cardId);
+  img.src = buildImageUrl(series, set, cardId, isLocal);
   modal.classList.remove("hidden");
 }
 

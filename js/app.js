@@ -783,7 +783,7 @@ function render(){
         <span class="lbl"><span class="lbl-full">${escapeHtml(v.name)}</span><span class="lbl-short">${escapeHtml(v.short || v.name)}</span></span>
       </div>`).join("");
     return `
-    <div class="card-row ${total === 0 ? "zero" : ""}" style="--type-color:${color}" data-series="${escapeHtml(meta.tcgdexSeries)}" data-set="${escapeHtml(meta.tcgdexSet)}" data-cardid="${escapeHtml(c.id)}">
+    <div class="card-row ${total === 0 ? "zero" : ""}" style="--type-color:${color}" data-series="${escapeHtml(meta.tcgdexSeries)}" data-set="${escapeHtml(meta.tcgdexSet)}" data-cardid="${escapeHtml(c.id)}" data-local="${meta.localImages ? "1" : ""}">
       <div class="card-main">
         <div class="num-badge">${escapeHtml(c.numero)}</div>
         <div class="card-info">
@@ -913,7 +913,7 @@ function renderInventory(sidebarHtml){
           <span class="lbl"><span class="lbl-full">${escapeHtml(v.name)}</span><span class="lbl-short">${escapeHtml(v.short || v.name)}</span></span>
         </div>`).join("");
       return `
-      <div class="card-row" style="--type-color:${color}" data-series="${escapeHtml(g.meta.tcgdexSeries)}" data-set="${escapeHtml(g.meta.tcgdexSet)}" data-cardid="${escapeHtml(c.id)}">
+      <div class="card-row" style="--type-color:${color}" data-series="${escapeHtml(g.meta.tcgdexSeries)}" data-set="${escapeHtml(g.meta.tcgdexSet)}" data-cardid="${escapeHtml(c.id)}" data-local="${g.meta.localImages ? "1" : ""}">
         <div class="card-main">
           <div class="num-badge">${escapeHtml(c.numero)}</div>
           <div class="card-info">
@@ -1418,7 +1418,7 @@ function renderBsp(sidebarHtml, meta){
           <span class="lbl"><span class="lbl-full">${escapeHtml(v.name)}</span><span class="lbl-short">${escapeHtml(v.short || v.name)}</span></span>
         </div>`).join("");
       return `
-      <div class="card-row ${total === 0 ? "zero" : ""}" style="--type-color:${color}" data-series="${escapeHtml(g.sub.tcgdexSeries)}" data-set="${escapeHtml(g.sub.tcgdexSet)}" data-cardid="${escapeHtml(c.id)}">
+      <div class="card-row ${total === 0 ? "zero" : ""}" style="--type-color:${color}" data-series="${escapeHtml(g.sub.tcgdexSeries)}" data-set="${escapeHtml(g.sub.tcgdexSet)}" data-cardid="${escapeHtml(c.id)}" data-local="${g.sub.localImages ? "1" : ""}">
         <div class="card-main">
           <div class="num-badge">${escapeHtml(c.numero)}</div>
           <div class="card-info">
@@ -1610,8 +1610,8 @@ function attachEvents(){
     row.addEventListener("click", (e) => {
       // No abrir la imagen si el click viene de un botón +/- de variante.
       if(e.target.closest(".vbtn")) return;
-      const { series, set, cardid } = row.dataset;
-      if(series && set && cardid) openCardImage(series, set, cardid);
+      const { series, set, cardid, local } = row.dataset;
+      if(series && set && cardid) openCardImage(series, set, cardid, local === "1");
     });
   });
 

@@ -38,6 +38,7 @@ export const COLLECTIONS = [
     gameSetMax: 76,
     tcgdexSeries: "me",
     tcgdexSet: "me06",
+    localImages: false,
     accent: "var(--poke)",
     seed: dlr,
   },
@@ -49,6 +50,7 @@ export const COLLECTIONS = [
     gameSetMax: 128,
     tcgdexSeries: "me",
     tcgdexSet: "30th",
+    localImages: false,
     accent: "var(--poke)",
     seed: c30,
   },  
@@ -60,6 +62,7 @@ export const COLLECTIONS = [
     gameSetMax: 84,
     tcgdexSeries: "me",
     tcgdexSet: "me05",
+    localImages: false,
     accent: "var(--poke)",
     seed: pbl,
   },
@@ -71,6 +74,7 @@ export const COLLECTIONS = [
     gameSetMax: 86,
     tcgdexSeries: "me",
     tcgdexSet: "me04",
+    localImages: false,
     accent: "var(--poke)",
     seed: cri
   },
@@ -82,6 +86,7 @@ export const COLLECTIONS = [
     gameSetMax: 88,
     tcgdexSeries: "me",
     tcgdexSet: "me03",
+    localImages: false,
     accent: "var(--poke)",
     seed: por
   },
@@ -93,6 +98,7 @@ export const COLLECTIONS = [
     gameSetMax: 217,
     tcgdexSeries: "me",
     tcgdexSet: "me02.5",
+    localImages: false,
     accent: "var(--poke)",
     seed: asc
   },
@@ -104,6 +110,7 @@ export const COLLECTIONS = [
     gameSetMax: 94,
     tcgdexSeries: "me",
     tcgdexSet: "me02",
+    localImages: false,
     accent: "var(--poke)",
     seed: pfl
   },
@@ -115,6 +122,7 @@ export const COLLECTIONS = [
     gameSetMax: 132,
     tcgdexSeries: "me",
     tcgdexSet: "me01",
+    localImages: false,
     accent: "var(--poke)",
     seed: meg
   },
@@ -126,6 +134,7 @@ export const COLLECTIONS = [
     gameSetMax: 86,
     tcgdexSeries: "sv",
     tcgdexSet: "sv10.5b",
+    localImages: false,
     accent: "var(--poke)",
     seed: blk
   },
@@ -137,6 +146,7 @@ export const COLLECTIONS = [
     gameSetMax: 86,
     tcgdexSeries: "sv",
     tcgdexSet: "sv10.5w",
+    localImages: false,
     accent: "var(--poke)",
     seed: wht
   },
@@ -148,6 +158,7 @@ export const COLLECTIONS = [
     gameSetMax: 182,
     tcgdexSeries: "sv",
     tcgdexSet: "sv10",
+    localImages: false,
     accent: "var(--poke)",
     seed: dri
   },
@@ -159,6 +170,7 @@ export const COLLECTIONS = [
     gameSetMax: 159,
     tcgdexSeries: "sv",
     tcgdexSet: "sv09",
+    localImages: false,
     accent: "var(--poke)",
     seed: jtg
   },
@@ -170,6 +182,7 @@ export const COLLECTIONS = [
     gameSetMax: 131,
     tcgdexSeries: "sv",
     tcgdexSet: "sv08.5",
+    localImages: false,
     accent: "var(--poke)",
     seed: pre
   },
@@ -181,6 +194,7 @@ export const COLLECTIONS = [
     gameSetMax: 191,
     tcgdexSeries: "sv",
     tcgdexSet: "sv08",
+    localImages: false,
     accent: "var(--poke)",
     seed: ssp
   },
@@ -192,6 +206,7 @@ export const COLLECTIONS = [
     gameSetMax: 142,
     tcgdexSeries: "sv",
     tcgdexSet: "sv07",
+    localImages: false,
     accent: "var(--poke)",
     seed: scr
   },
@@ -203,6 +218,7 @@ export const COLLECTIONS = [
     gameSetMax: 64,
     tcgdexSeries: "sv",
     tcgdexSet: "sv06.5",
+    localImages: false,
     accent: "var(--poke)",
     seed: sfa
   },
@@ -214,6 +230,7 @@ export const COLLECTIONS = [
     gameSetMax: 167,
     tcgdexSeries: "sv",
     tcgdexSet: "sv06",
+    localImages: false,
     accent: "var(--poke)",
     seed: twm
   },
@@ -225,6 +242,7 @@ export const COLLECTIONS = [
     gameSetMax: 162,
     tcgdexSeries: "sv",
     tcgdexSet: "sv05",
+    localImages: false,
     accent: "var(--poke)",
     seed: tef
   },
@@ -236,6 +254,7 @@ export const COLLECTIONS = [
     gameSetMax: 91,
     tcgdexSeries: "sv",
     tcgdexSet: "sv04.5",
+    localImages: false,
     accent: "var(--poke)",
     seed: paf
   },
@@ -247,6 +266,7 @@ export const COLLECTIONS = [
     gameSetMax: 182,
     tcgdexSeries: "sv",
     tcgdexSet: "sv04",
+    localImages: false,
     accent: "var(--poke)",
     seed: par
   },
@@ -258,6 +278,7 @@ export const COLLECTIONS = [
     gameSetMax: 165,
     tcgdexSeries: "sv",
     tcgdexSet: "sv03.5",
+    localImages: false,
     accent: "var(--poke)",
     seed: mew
   },
@@ -269,6 +290,7 @@ export const COLLECTIONS = [
     gameSetMax: 197,
     tcgdexSeries: "sv",
     tcgdexSet: "sv03",
+    localImages: false,
     accent: "var(--poke)",
     seed: obf
   },
@@ -280,6 +302,7 @@ export const COLLECTIONS = [
     gameSetMax: 193,
     tcgdexSeries: "sv",
     tcgdexSet: "sv02",
+    localImages: false,
     accent: "var(--poke)",
     seed: pal
   },
@@ -291,6 +314,7 @@ export const COLLECTIONS = [
     gameSetMax: 198,
     tcgdexSeries: "sv",
     tcgdexSet: "sv01",
+    localImages: false,
     accent: "var(--poke)",
     seed: svi
   },
@@ -302,6 +326,7 @@ export const COLLECTIONS = [
     gameSetMax: 165,
     tcgdexSeries: "swsh",
     tcgdexSet: "swsh9",
+    localImages: false,
     accent: "var(--poke)",
     seed: brs
   },
@@ -313,6 +338,7 @@ export const COLLECTIONS = [
     gameSetMax: 264,
     tcgdexSeries: "swsh",
     tcgdexSet: "swsh8",
+    localImages: false,
     accent: "var(--poke)",
     seed: fst
   },
@@ -324,6 +350,7 @@ export const COLLECTIONS = [
     gameSetMax: 202,
     tcgdexSeries: "swsh",
     tcgdexSet: "swsh1",
+    localImages: false,
     accent: "var(--poke)",
     seed: ssh
   },
@@ -335,6 +362,7 @@ export const COLLECTIONS = [
     gameSetMax: 106,
     tcgdexSeries: "xy",
     tcgdexSet: "xy2",
+    localImages: false,
     accent: "var(--poke)",
     seed: flf
   },                                           
@@ -355,6 +383,7 @@ export const COLLECTIONS = [
         gameSetMax: null, // sin distinción Play Set/Master Set: se muestran las 4 variantes (set real: 110 cartas)
         tcgdexSeries: "me",
         tcgdexSet: "mep",
+        localImages: true,
         seed: mep
       },
       {
@@ -364,6 +393,7 @@ export const COLLECTIONS = [
         gameSetMax: null, // sin distinción Play Set/Master Set: se muestran las 4 variantes (set real: 225 cartas)
         tcgdexSeries: "sv",
         tcgdexSet: "svp",
+        localImages: false,
         seed: svp
       }
     ]
