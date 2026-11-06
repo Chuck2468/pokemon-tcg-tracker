@@ -7984,10 +7984,10 @@
   },
   {
     "reprintGroup": 10940,
-    "id": "Kyogre",
+    "id": "Sprigatito",
     "reprints": [
-      "DLR 018",
-      "DLR 080"
+      "DLR 012",
+      "DLR 105"
     ]
   },
   {
@@ -8411,6 +8411,22 @@
 	    "30C 146"
 	  ]
 	},
+	{
+	  "reprintGroup": 10994,
+	  "id": "Zorua",
+	  "reprints": [
+	    "DLR 066",
+	    "DLR 112"
+	  ]
+	},
+	{
+	  "reprintGroup": 10995,
+	  "id": "Eevee",
+	  "reprints": [
+	    "DLR 078",
+	    "DLR 114"
+	  ]
+	},     
   {
     "reprintGroup": 20000,
     "tipo": "Objeto",
@@ -11945,6 +11961,11 @@
     "reprintGroup": 30391,
     "tipo": "Partidario",
     "nombre": "Entrenamiento de Vito y Leti"
+  },
+  {
+    "reprintGroup": 30392,
+    "tipo": "Partidario",
+    "nombre": "Grisel"
   },
   {
     "reprintGroup": 40000,
