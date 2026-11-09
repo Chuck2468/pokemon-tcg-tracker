@@ -3,6 +3,7 @@ import { storage } from "./cardRepository.js";
 import { TYPE_COLORS,TYPE_SOFT,TYPES,VARIANTS,ENERGY_TYPES,ENERGY_TYPE_COLORS } from "./constants.js";
 import { COLLECTIONS } from "./data/collections.js";
 import { userRepository } from "./userRepository.js";
+import { deckRepository } from "./deckRepository.js";
 import { state, INVENTORY_ID, DECKCHECK_ID, DAMAGECALC_MEGANIUM_ID, DAMAGECALC_CHANDELURE_ID, DAMAGECALC_IDS } from "./state.js";
 import {
   escapeHtml,
@@ -224,10 +225,14 @@ function selectCollection(id){
   state.activeType = "ALL";
   state.activeStatus = "ALL";
   state.onlyFullArt = false;
+  state.onlyAvailable = false;
 
   // El Comprobador de Mazos necesita el stock de todas las colecciones para
   // poder sumar reimpresiones, igual que el Inventario.
   if(id === INVENTORY_ID || id === DECKCHECK_ID){
+    // El Inventario enseña cuántas copias están libres: refresca las
+    // asignaciones a mazos cada vez que se entra.
+    if(id === INVENTORY_ID) loadInDecks().then(render);
     if(!allCollectionsLoaded()){
       render();
       loadAllCollections().then(render);
@@ -276,6 +281,43 @@ function mobileNavigate(id){
   } else {
     selectCollection(id);
   }
+}
+
+// ---- Disponibilidad (cartas fuera de mazos) ----
+// state.inDecks guarda, por carta, cuántas copias de cada variante están
+// asignadas a algún mazo. Disponibles = stock de la carta - copias en mazos.
+// Si el stock baja por debajo de lo asignado, el disponible sale negativo y se
+// marca como "mazo incompleto" (no se bloquea el guardado).
+async function loadInDecks(){
+  const rows = await deckRepository.getInDecks();
+  const map = {};
+  for(const r of rows){
+    map[`${r.collection}|${r.card_id}`] = {
+      normal: r.normal_in_decks || 0,
+      reverse: r.reverse_in_decks || 0,
+      holo: r.holo_in_decks || 0,
+      fullart: r.fullart_in_decks || 0
+    };
+  }
+  state.inDecks = map;
+}
+
+function inDecksOf(collectionId, card){
+  return state.inDecks[`${collectionId}|${card.id}`] || null;
+}
+
+function totalInDecks(used){
+  return used ? VARIANTS.reduce((s, v) => s + (used[v.key] || 0), 0) : 0;
+}
+
+// "3/7" (disponibles/total) cuando hay copias en mazos; solo el total si no.
+function buildAvailabilityLabel(total, usedN){
+  if(!usedN) return String(total);
+  const avail = total - usedN;
+  if(avail < 0){
+    return `<span style="color:var(--danger, #e5484d)" title="Mazo incompleto">${avail}/${total}</span>`;
+  }
+  return `${avail}/${total}`;
 }
 
 async function changeVariant(collectionId, id, variantKey, delta){
@@ -431,6 +473,8 @@ function buildMobileFilterSheetHtml(){
       <div class="chips">
         <div class="chip ${state.onlyFullArt ? "active" : ""}" id="fullArtToggleMobile"
           style="${state.onlyFullArt ? `background:var(--v-fullart);` : ""}">Solo FullArt</div>
+        <div class="chip ${state.onlyAvailable ? "active" : ""}" id="availableToggleMobile"
+          style="${state.onlyAvailable ? `background:var(--electric-blue);` : ""}">Solo disponibles</div>
       </div>
     </div>`;
 
@@ -874,6 +918,9 @@ function renderInventory(sidebarHtml){
   const fullArtChipHtml = `<div class="chip ${state.onlyFullArt ? "active" : ""}" id="fullArtToggle"
     style="${state.onlyFullArt ? `background:var(--v-fullart);` : ""}">Solo FullArt</div>`;
 
+  const availableChipHtml = `<div class="chip ${state.onlyAvailable ? "active" : ""}" id="availableToggle"
+    style="${state.onlyAvailable ? `background:var(--electric-blue);` : ""}">Solo disponibles</div>`;
+
   const q = state.search.trim().toLowerCase();
 
   const groups = leafCollections().map(meta => {
@@ -886,6 +933,9 @@ function renderInventory(sidebarHtml){
     }
     if(state.onlyFullArt){
       cards = cards.filter(card => (card.variantes.fullart || 0) > 0);
+    }
+    if(state.onlyAvailable){
+      cards = cards.filter(card => cardTotal(card) - totalInDecks(inDecksOf(meta.id, card)) > 0);
     }
     if(q){
       cards = cards.filter(card =>
@@ -905,10 +955,12 @@ function renderInventory(sidebarHtml){
     const rows = g.cards.map(c => {
       const color = TYPE_COLORS[c.tipo] || "var(--poke)";
       const total = cardTotal(c);
+      const used = inDecksOf(g.meta.id, c);
+      const usedTotal = totalInDecks(used);
       const variantsHtml = applicableVariants(c, g.meta.gameSetMax).map(v => `
         <div class="variant-badge readonly" style="--variant-color:${v.color}">
           <div class="vrow">
-            <span class="vcount">${c.variantes[v.key] || 0}</span>
+            <span class="vcount">${buildAvailabilityLabel(c.variantes[v.key] || 0, used ? used[v.key] : 0)}</span>
           </div>
           <span class="lbl"><span class="lbl-full">${escapeHtml(v.name)}</span><span class="lbl-short">${escapeHtml(v.short || v.name)}</span></span>
         </div>`).join("");
@@ -922,7 +974,7 @@ function renderInventory(sidebarHtml){
           </div>
         </div>
         <div class="variants-row">${variantsHtml}</div>
-        <div class="total-badge">${total}<span class="lbl">Total</span></div>
+        <div class="total-badge">${buildAvailabilityLabel(total, usedTotal)}<span class="lbl">${usedTotal ? "Disp." : "Total"}</span></div>
       </div>`;
     }).join("");
     return `
@@ -966,7 +1018,7 @@ function renderInventory(sidebarHtml){
 
       <div class="chips">${typeChipsHtml}</div>
       <div class="chips">${buildEnergyTypeChipsHtml()}</div>
-      <div class="chips">${fullArtChipHtml}</div>
+      <div class="chips">${fullArtChipHtml}${availableChipHtml}</div>
 
       ${groupsHtml}
 
@@ -1567,6 +1619,17 @@ function attachEvents(){
     });
   }
 
+  // Filtro "Solo disponibles" (Inventario): toolbar de escritorio y panel móvil.
+  for(const toggleId of ["availableToggle", "availableToggleMobile"]){
+    const toggle = document.getElementById(toggleId);
+    if(toggle){
+      toggle.addEventListener("click", () => {
+        state.onlyAvailable = !state.onlyAvailable;
+        render();
+      });
+    }
+  }
+
   const searchInput = document.getElementById("searchInput");
   if(searchInput){
     searchInput.addEventListener("input", (e) => {
@@ -1697,10 +1760,11 @@ async function startApp() {
   if(state.activeId === INVENTORY_ID){
     if(!allCollectionsLoaded()){
       render();
-      await loadAllCollections();
+      await Promise.all([loadAllCollections(), loadInDecks()]);
       render();
     } else {
       render();
+      loadInDecks().then(render);
     }
     return;
   }

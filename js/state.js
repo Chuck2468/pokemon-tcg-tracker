@@ -26,6 +26,8 @@ export const state = {
                            // de categorías se muestra pero no filtra nada (ver filteredCards).
   activeStatus: "ALL",
   onlyFullArt: false,  // filtro exclusivo del Inventario
+  onlyAvailable: false, // filtro exclusivo del Inventario: solo cartas con copias libres (fuera de mazos)
+  inDecks: {},         // "coleccion|card_id" -> {normal, reverse, holo, fullart}: copias asignadas a mazos
   saveError: false,
 
   deckListText: "",     // texto pegado en el Comprobador de Mazos

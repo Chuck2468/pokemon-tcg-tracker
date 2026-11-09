@@ -7938,7 +7938,8 @@
     "id": "Masquerain",
     "reprints": [
       "DLR 003",
-      "DLR 077"
+      "DLR 077",
+      "MEP 111"
     ]
   },
   {
@@ -7971,7 +7972,8 @@
     "id": "Magmortar",
     "reprints": [
       "DLR 013",
-      "DLR 079"
+      "DLR 079",
+      "MEP 112"
     ]
   },
   {
@@ -8037,7 +8039,8 @@
     "id": "Enamorus",
     "reprints": [
       "DLR 034",
-      "DLR 083"
+      "DLR 083",
+      "MEP 113"
     ]
   },
   {
@@ -8426,7 +8429,23 @@
 	    "DLR 078",
 	    "DLR 114"
 	  ]
-	},     
+	},
+	{
+	  "reprintGroup": 10996,
+	  "id": "Kommo-o",
+	  "reprints": [
+	    "DLR 075",
+	    "MEP 114"
+	  ]
+	},
+	{
+	  "reprintGroup": 10997,
+	  "id": "Kyogre",
+	  "reprints": [
+	    "DLR 026",
+	    "MEP 117"
+	  ]
+	},             
   {
     "reprintGroup": 20000,
     "tipo": "Objeto",
