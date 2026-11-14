@@ -1643,7 +1643,13 @@
   }
 
   /* ---- Mis Mazos (solo admin): pegar al final de style.css ---- */
-  .mazo-tabs{align-items:center; margin-bottom:18px;}
+  .mazo-tabs{
+    display:flex;
+    gap:7px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin-bottom:18px;
+  }
   .mazo-new-btn{
     width:auto;
     padding:6px 14px;

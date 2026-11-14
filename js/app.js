@@ -1359,7 +1359,7 @@ function renderDecks(sidebarHtml){
 
       <p class="deck-intro">Las cartas que metas en un mazo dejan de contar como disponibles en el Inventario. Solo puedes añadir copias que tengas libres.</p>
 
-      <div class="chips mazo-tabs">
+      <div class="mazo-tabs">
         ${tabsHtml}
         <button type="button" class="sync-btn mazo-new-btn" id="newDeckBtn">+ Nuevo mazo</button>
       </div>
