@@ -2,6 +2,7 @@ import { COLLECTIONS } from "./data/collections.js";
 
 export const INVENTORY_ID = "inventory";
 export const DECKCHECK_ID = "deckcheck";
+export const DECKS_ID = "decks"; // Mis Mazos (solo admin)
 
 // La Calculadora de Daño es una "familia" de herramientas: una por cada
 // pareja de cartas (Mega + su pre-evolución). Cada pareja tiene su propio
@@ -29,6 +30,11 @@ export const state = {
   onlyAvailable: false, // filtro exclusivo del Inventario: solo cartas con copias libres (fuera de mazos)
   inDecks: {},         // "coleccion|card_id" -> {normal, reverse, holo, fullart}: copias asignadas a mazos
   saveError: false,
+
+  // Mis Mazos (solo admin). decks === null significa "aún sin cargar".
+  decks: null,          // [{id, name, cards: [{id, collection, card_id, variant, qty}]}]
+  activeDeckId: null,
+  deckSearch: "",       // texto del buscador para añadir cartas al mazo activo
 
   deckListText: "",     // texto pegado en el Comprobador de Mazos
   deckCheckResult: null, // resultado de la última comprobación (o null)

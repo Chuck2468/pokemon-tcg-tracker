@@ -1641,3 +1641,111 @@
     color:var(--muted);
     margin:14px 0 0;
   }
+
+  /* ---- Mis Mazos (solo admin): pegar al final de style.css ---- */
+  .mazo-tabs{align-items:center; margin-bottom:18px;}
+  .mazo-new-btn{
+    width:auto;
+    padding:6px 14px;
+    border-color:var(--estadio);
+    color:var(--estadio);
+  }
+  .mazo-new-btn:hover:not(:disabled){background:var(--estadio-soft);}
+  .mazo-delete-btn{
+    width:auto;
+    padding:5px 12px;
+    font-size:12px;
+    border-color:var(--partidario);
+    color:var(--partidario);
+  }
+  .mazo-section-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin:22px 0 10px;
+  }
+  .mazo-section-title{
+    font-weight:600;
+    font-size:14px;
+    color:var(--ink);
+  }
+  .mazo-card-list{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin-top:10px;
+  }
+  .mazo-card-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    background:var(--bg-row);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:8px 12px;
+  }
+  .mazo-card-info{min-width:0; flex:1;}
+  .mazo-card-name{
+    font-weight:600;
+    font-size:13.5px;
+    color:var(--ink);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .mazo-card-meta{
+    font-size:11.5px;
+    color:var(--muted);
+    margin-top:2px;
+  }
+  .mazo-qty{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    flex-shrink:0;
+  }
+  .mazo-qty-n{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:15px;
+    min-width:22px;
+    text-align:center;
+    color:var(--ink);
+  }
+  .mazo-add-group{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    justify-content:flex-end;
+  }
+  .mazo-add-btn{
+    background:var(--bg-deep);
+    border:1px solid var(--line);
+    border-radius:8px;
+    color:var(--ink);
+    font-family:inherit;
+    font-size:12px;
+    font-weight:600;
+    padding:5px 10px;
+    cursor:pointer;
+  }
+  .mazo-add-btn:hover:not(:disabled){border-color:var(--estadio); color:var(--estadio);}
+  .mazo-add-btn:disabled{opacity:.5; cursor:default;}
+  .mazo-add-free{
+    font-weight:500;
+    color:var(--muted);
+    margin-left:3px;
+  }
+  .mazo-empty,
+  .mazo-hint{
+    color:var(--muted);
+    font-size:13px;
+    padding:14px 4px;
+  }
+  @media (max-width:640px){
+    .mazo-card-row{padding:7px 10px;}
+    .mazo-add-group{justify-content:flex-start;}
+    .mazo-card-row:has(.mazo-add-group){flex-direction:column; align-items:stretch;}
+  }

@@ -4,7 +4,7 @@ import { TYPE_COLORS,TYPE_SOFT,TYPES,VARIANTS,ENERGY_TYPES,ENERGY_TYPE_COLORS } 
 import { COLLECTIONS } from "./data/collections.js";
 import { userRepository } from "./userRepository.js";
 import { deckRepository } from "./deckRepository.js";
-import { state, INVENTORY_ID, DECKCHECK_ID, DAMAGECALC_MEGANIUM_ID, DAMAGECALC_CHANDELURE_ID, DAMAGECALC_IDS } from "./state.js";
+import { state, INVENTORY_ID, DECKCHECK_ID, DECKS_ID, DAMAGECALC_MEGANIUM_ID, DAMAGECALC_CHANDELURE_ID, DAMAGECALC_IDS } from "./state.js";
 import {
   escapeHtml,
   getMeta,
@@ -242,6 +242,18 @@ function selectCollection(id){
     return;
   }
 
+  // Mis Mazos necesita el stock de todas las colecciones (para buscar cartas
+  // y saber cuántas copias hay libres) y la lista de mazos.
+  if(id === DECKS_ID){
+    state.deckSearch = "";
+    render();
+    Promise.all([
+      allCollectionsLoaded() ? null : loadAllCollections(),
+      loadDecks()
+    ]).then(render);
+    return;
+  }
+
   // Las Calculadoras de Daño no dependen del stock de ninguna colección, así
   // que no hay nada que cargar: solo repintar.
   if(DAMAGECALC_IDS.includes(id)){
@@ -381,6 +393,14 @@ function buildSidebarHtml(){
       </span>
     </div>`;
 
+  const decksItem = `
+    <div class="sidebar-item sidebar-item-inventory ${state.activeId === DECKS_ID ? "active" : ""}" data-collection="${DECKS_ID}">
+      <i class="ti ti-layers-intersect" aria-hidden="true"></i>
+      <span class="sidebar-name">
+        <span class="sidebar-name-title">Mis Mazos</span>
+      </span>
+    </div>`;
+
   const damageCalcMeganiumItem = buildDamageCalcItemHtml(
     DAMAGECALC_MEGANIUM_ID, "[Ogerpon & Mega-Meganium]", "sidebar-item sidebar-item-inventory"
   );
@@ -421,6 +441,7 @@ function buildSidebarHtml(){
       <div class="sidebar-title">Herramientas</div>
       ${inventoryItem}
       ${deckCheckItem}
+      ${decksItem}
       ${damageCalcMeganiumItem}
       ${damageCalcChandelureItem}
       <div class="sidebar-title">Colecciones</div>
@@ -526,12 +547,12 @@ function buildMobileNavHtml(){
   // dentro de esa sección (una colección concreta, o el Comprobador de
   // Mazos) aunque el panel esté cerrado. Sin esto, el marco desaparecía en
   // cuanto se elegía un elemento y se cerraba la hoja desplegable.
-  const isCollectionView = state.activeId !== INVENTORY_ID && state.activeId !== DECKCHECK_ID && !DAMAGECALC_IDS.includes(state.activeId);
-  const isToolsView = state.activeId === DECKCHECK_ID || DAMAGECALC_IDS.includes(state.activeId);
+  const isCollectionView = state.activeId !== INVENTORY_ID && state.activeId !== DECKCHECK_ID && state.activeId !== DECKS_ID && !DAMAGECALC_IDS.includes(state.activeId);
+  const isToolsView = state.activeId === DECKCHECK_ID || state.activeId === DECKS_ID || DAMAGECALC_IDS.includes(state.activeId);
   // Ni el Comprobador de Mazos ni las Calculadoras de Daño tienen búsqueda
   // ni chips que filtrar, así que el botón "Filtro" no tiene sentido en
   // esas vistas: se oculta en vez de abrir un panel vacío.
-  const hasFilters = state.activeId !== DECKCHECK_ID && !DAMAGECALC_IDS.includes(state.activeId);
+  const hasFilters = state.activeId !== DECKCHECK_ID && state.activeId !== DECKS_ID && !DAMAGECALC_IDS.includes(state.activeId);
 
   let panelHtml = "";
   if(open === "colecciones" && isAdmin){
@@ -575,6 +596,13 @@ function buildMobileNavHtml(){
               <span class="sidebar-name-title">Comprobador de Mazos</span>
             </span>
           </div>
+          ${isAdmin ? `
+          <div class="mobile-sheet-item ${state.activeId === DECKS_ID ? "active" : ""}" data-collection="${DECKS_ID}">
+            <i class="ti ti-layers-intersect" aria-hidden="true"></i>
+            <span class="sidebar-name">
+              <span class="sidebar-name-title">Mis Mazos</span>
+            </span>
+          </div>` : ""}
           <div class="mobile-sheet-item ${state.activeId === DAMAGECALC_MEGANIUM_ID ? "active" : ""}" data-collection="${DAMAGECALC_MEGANIUM_ID}">
             <i class="ti ti-bolt" aria-hidden="true"></i>
             <span class="sidebar-name sidebar-name-inline-on-mobile">
@@ -758,6 +786,11 @@ function render(){
 
   if(state.activeId === DECKCHECK_ID){
     renderDeckChecker(sidebarHtml);
+    return;
+  }
+
+  if(state.activeId === DECKS_ID){
+    renderDecks(sidebarHtml);
     return;
   }
 
@@ -1179,6 +1212,254 @@ function renderDeckChecker(sidebarHtml){
   attachEvents();
 }
 
+// ---- Mis Mazos (solo admin) ----
+// Un mazo es una lista de (colección, carta, variante, cantidad). Solo se
+// pueden añadir copias que estén libres: el stock de la carta menos lo que ya
+// usan los mazos (state.inDecks, que aquí se recalcula desde state.decks).
+async function loadDecks(){
+  state.decks = await deckRepository.getDecks();
+  if(!state.decks.some(d => d.id === state.activeDeckId)){
+    state.activeDeckId = state.decks.length ? state.decks[0].id : null;
+  }
+  recomputeInDecks();
+}
+
+function recomputeInDecks(){
+  const map = {};
+  for(const d of state.decks || []){
+    for(const dc of d.cards){
+      const key = `${dc.collection}|${dc.card_id}`;
+      if(!map[key]) map[key] = { normal: 0, reverse: 0, holo: 0, fullart: 0 };
+      map[key][dc.variant] += dc.qty;
+    }
+  }
+  state.inDecks = map;
+}
+
+function findCardInCache(collectionId, cardId){
+  return (state.cache[collectionId] || []).find(c => String(c.id) === String(cardId)) || null;
+}
+
+// Copias libres de una variante: stock - copias en todos los mazos.
+function freeCopies(collectionId, card, variantKey){
+  const used = inDecksOf(collectionId, card);
+  return (card.variantes[variantKey] || 0) - (used ? used[variantKey] || 0 : 0);
+}
+
+function buildDeckCardsHtml(deck){
+  if(!deck.cards.length){
+    return `<div class="mazo-empty">Este mazo está vacío. Busca una carta abajo para añadirla.</div>`;
+  }
+  const rows = deck.cards
+    .map(dc => ({ dc, card: findCardInCache(dc.collection, dc.card_id) }))
+    .sort((x, y) => (x.card?.nombre || "").localeCompare(y.card?.nombre || ""))
+    .map(({ dc, card }) => {
+      const variant = VARIANTS.find(v => v.key === dc.variant);
+      const free = card ? freeCopies(dc.collection, card, dc.variant) : 0;
+      const attrs = `data-collection="${escapeHtml(dc.collection)}" data-id="${escapeHtml(String(dc.card_id))}" data-variant="${dc.variant}"`;
+      return `
+      <div class="mazo-card-row">
+        <div class="mazo-card-info">
+          <div class="mazo-card-name">${escapeHtml(card ? card.nombre : dc.card_id)}</div>
+          <div class="mazo-card-meta">${card ? `${escapeHtml(String(card.set))} ${escapeHtml(String(card.id))}` : escapeHtml(dc.collection)} · ${variant ? variant.name : dc.variant}</div>
+        </div>
+        <div class="mazo-qty">
+          <button type="button" class="vbtn" data-deck-action="dec" ${attrs}>−</button>
+          <span class="mazo-qty-n">${dc.qty}</span>
+          <button type="button" class="vbtn" data-deck-action="inc" ${attrs} ${free <= 0 ? "disabled" : ""}>+</button>
+        </div>
+      </div>`;
+    }).join("");
+  return `<div class="mazo-card-list">${rows}</div>`;
+}
+
+function buildDeckSearchResultsHtml(){
+  const q = state.deckSearch.trim().toLowerCase();
+  if(q.length < 2){
+    return `<div class="mazo-hint">Escribe al menos 2 letras del nombre o el número de la carta.</div>`;
+  }
+  const found = [];
+  for(const meta of leafCollections()){
+    for(const card of state.cache[meta.id] || []){
+      if(cardTotal(card) <= 0) continue;
+      if(card.nombre.toLowerCase().includes(q) || String(card.numero).toLowerCase().includes(q)){
+        found.push({ collectionId: meta.id, card });
+      }
+    }
+  }
+  if(!found.length){
+    return `<div class="mazo-hint">No hay cartas en tu inventario que coincidan.</div>`;
+  }
+  return found.slice(0, 15).map(({ collectionId, card }) => {
+    const buttons = VARIANTS
+      .map(v => ({ v, free: freeCopies(collectionId, card, v.key) }))
+      .filter(x => x.free > 0)
+      .map(({ v, free }) => `
+        <button type="button" class="mazo-add-btn" data-deck-action="add"
+          data-collection="${escapeHtml(collectionId)}" data-id="${escapeHtml(String(card.id))}" data-variant="${v.key}">
+          + ${v.short} <span class="mazo-add-free">${free} libre${free === 1 ? "" : "s"}</span>
+        </button>`).join("");
+    return `
+    <div class="mazo-card-row">
+      <div class="mazo-card-info">
+        <div class="mazo-card-name">${escapeHtml(card.nombre)}</div>
+        <div class="mazo-card-meta">${escapeHtml(String(card.set))} ${escapeHtml(String(card.id))}</div>
+      </div>
+      <div class="mazo-add-group">${buttons || `<span class="mazo-card-meta">Sin copias libres</span>`}</div>
+    </div>`;
+  }).join("") + (found.length > 15 ? `<div class="mazo-hint">Hay más resultados: afina la búsqueda.</div>` : "");
+}
+
+function renderDecks(sidebarHtml){
+  if(!allCollectionsLoaded() || state.decks === null){
+    root.innerHTML = `
+    <div class="shell">
+      ${sidebarHtml}
+      <div class="main"><div class="loading">Cargando mazos…</div></div>
+    </div>`;
+    attachEvents();
+    return;
+  }
+
+  const userInfoHtml = buildUserPanelHtml();
+  const deck = state.decks.find(d => d.id === state.activeDeckId) || null;
+  const tabsHtml = state.decks.map(d => `
+    <div class="chip ${d.id === state.activeDeckId ? "active" : ""}" data-deck-select="${d.id}">${escapeHtml(d.name)}</div>`).join("");
+
+  const deckBodyHtml = deck ? `
+    <div class="mazo-section-head">
+      <div class="mazo-section-title">${escapeHtml(deck.name)} · ${deck.cards.reduce((s, dc) => s + dc.qty, 0)} cartas</div>
+      <button type="button" class="sync-btn mazo-delete-btn" id="deleteDeckBtn">Borrar mazo</button>
+    </div>
+    ${buildDeckCardsHtml(deck)}
+
+    <div class="mazo-section-head">
+      <div class="mazo-section-title">Añadir carta</div>
+    </div>
+    <div class="search-box">
+      <input id="deckSearchInput" type="text" placeholder="Buscar en tu inventario…" value="${escapeHtml(state.deckSearch)}" autocomplete="off">
+    </div>
+    <div id="deckSearchResults" class="mazo-card-list">${buildDeckSearchResultsHtml()}</div>
+  ` : `<div class="mazo-empty">Aún no tienes mazos. Crea el primero con «Nuevo mazo».</div>`;
+
+  root.innerHTML = `
+  <div class="shell">
+    ${sidebarHtml}
+    <div class="main">
+    <div class="wrap">
+
+      ${userInfoHtml}
+
+      <div class="header">
+        <div class="title-block">
+          <div class="eyebrow">Solo administrador</div>
+          <h1>Mis <span style="color:var(--estadio)">Mazos</span></h1>
+        </div>
+      </div>
+
+      <p class="deck-intro">Las cartas que metas en un mazo dejan de contar como disponibles en el Inventario. Solo puedes añadir copias que tengas libres.</p>
+
+      <div class="chips mazo-tabs">
+        ${tabsHtml}
+        <button type="button" class="sync-btn mazo-new-btn" id="newDeckBtn">+ Nuevo mazo</button>
+      </div>
+
+      <div id="decksMain">${deckBodyHtml}</div>
+
+    </div>
+    </div>
+  </div>`;
+
+  attachEvents();
+}
+
+// Ejecuta una acción sobre una carta del mazo activo y recarga los mazos. Si
+// Supabase la rechaza (p.ej. más copias de las que tienes), enseña su mensaje.
+async function handleDeckAction(btn){
+  const deck = (state.decks || []).find(d => d.id === state.activeDeckId);
+  if(!deck) return;
+  const { deckAction, collection, id, variant } = btn.dataset;
+  const existing = deck.cards.find(dc =>
+    dc.collection === collection && String(dc.card_id) === String(id) && dc.variant === variant);
+
+  btn.disabled = true;
+  let res;
+  if(deckAction === "add"){
+    res = existing
+      ? await deckRepository.setQty(existing.id, existing.qty + 1)
+      : await deckRepository.addCard(deck.id, collection, id, variant, 1);
+  } else if(deckAction === "inc" && existing){
+    res = await deckRepository.setQty(existing.id, existing.qty + 1);
+  } else if(deckAction === "dec" && existing){
+    res = existing.qty <= 1
+      ? await deckRepository.removeCard(existing.id)
+      : await deckRepository.setQty(existing.id, existing.qty - 1);
+  } else {
+    return;
+  }
+
+  if(!res.ok) alert(res.message);
+  await loadDecks();
+  render();
+}
+
+function attachDeckEvents(){
+  if(state.activeId !== DECKS_ID) return;
+
+  document.querySelectorAll("[data-deck-select]").forEach(el => {
+    el.addEventListener("click", () => {
+      state.activeDeckId = Number(el.dataset.deckSelect);
+      state.deckSearch = "";
+      render();
+    });
+  });
+
+  const newDeckBtn = document.getElementById("newDeckBtn");
+  if(newDeckBtn){
+    newDeckBtn.addEventListener("click", async () => {
+      const name = (prompt("Nombre del mazo:") || "").trim();
+      if(!name) return;
+      const res = await deckRepository.createDeck(name);
+      if(!res.ok){ alert(res.message); return; }
+      state.activeDeckId = res.id;
+      state.deckSearch = "";
+      await loadDecks();
+      render();
+    });
+  }
+
+  const deleteDeckBtn = document.getElementById("deleteDeckBtn");
+  if(deleteDeckBtn){
+    deleteDeckBtn.addEventListener("click", async () => {
+      const deck = state.decks.find(d => d.id === state.activeDeckId);
+      if(!deck || !confirm(`¿Borrar el mazo «${deck.name}»? Sus cartas volverán a estar disponibles.`)) return;
+      const res = await deckRepository.deleteDeck(deck.id);
+      if(!res.ok){ alert(res.message); return; }
+      await loadDecks();
+      render();
+    });
+  }
+
+  // El buscador solo repinta la lista de resultados (no toda la pantalla) para
+  // no perder el foco mientras se escribe.
+  const searchInput = document.getElementById("deckSearchInput");
+  const results = document.getElementById("deckSearchResults");
+  if(searchInput && results){
+    searchInput.addEventListener("input", () => {
+      state.deckSearch = searchInput.value;
+      results.innerHTML = buildDeckSearchResultsHtml();
+    });
+  }
+
+  const main = document.getElementById("decksMain");
+  if(main){
+    main.addEventListener("click", e => {
+      const btn = e.target.closest("[data-deck-action]");
+      if(btn && !btn.disabled) handleDeckAction(btn);
+    });
+  }
+}
+
 // Contador +/- reutilizado por todas las Calculadoras de Daño: mismo
 // lenguaje visual que las variant-badge de las colecciones. `pairId` y
 // `field` identifican qué hueco de `state.damageCalc` hay que mutar (ver
@@ -1538,6 +1819,8 @@ function renderBsp(sidebarHtml, meta){
 }
 
 function attachEvents(){
+  attachDeckEvents();
+
   document.querySelectorAll(".sidebar-item").forEach(item => {
     item.addEventListener("click", () => {
       selectCollection(item.dataset.collection);
